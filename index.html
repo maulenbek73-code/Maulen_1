@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ГеоКамера</title>
+<meta name="theme-color" content="#0f3d2e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Field tool: one column, big thumb-reachable buttons, coordinates as the hero */
+:root{--bg:#eef2ef;--card:#fff;--text:#14211b;--muted:#5d6b64;--line:#d3dcd6;--accent:#0f6b4a;--accent2:#c2410c;--ok:#15803d;--warn:#b45309;--err:#b91c1c;--band:#0f3d2e;--bandText:#e8f3ee;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0e1512;--card:#17211c;--text:#e4ece7;--muted:#93a39a;--line:#2a3830;--accent:#34c38f;--accent2:#fb923c;--ok:#4ade80;--warn:#fbbf24;--err:#f87171;--band:#0a2a1f;--bandText:#e4ece7;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1512;--card:#17211c;--text:#e4ece7;--muted:#93a39a;--line:#2a3830;--accent:#34c38f;--accent2:#fb923c;--ok:#4ade80;--warn:#fbbf24;--err:#f87171;--band:#0a2a1f;--bandText:#e4ece7;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.45 var(--sans);padding-bottom:env(safe-area-inset-bottom,0px)}
+header{background:var(--band);color:var(--bandText);padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;justify-content:space-between;gap:12px}
+header b{font-size:17px;letter-spacing:.02em}
+.chip{font:600 12px/1 var(--sans);padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.12);display:flex;gap:6px;align-items:center;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:#9ca3af}
+.dot.ok{background:#4ade80}.dot.warn{background:#fbbf24}.dot.err{background:#f87171}
+main{padding:14px max(16px,env(safe-area-inset-right,0px)) 32px max(16px,env(safe-area-inset-left,0px));max-width:560px;margin:0 auto;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.coords{display:grid;gap:8px}
+.ll{font:600 21px/1.25 var(--mono);font-variant-numeric:tabular-nums;word-break:break-all}
+.xy{font:14px/1.4 var(--mono);font-variant-numeric:tabular-nums;color:var(--muted)}
+.xy b{color:var(--text);font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.meta{font-size:13px;color:var(--muted)}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;letter-spacing:.03em;text-transform:uppercase}
+input[type=text],select{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shoot{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shoot button{height:88px;font:700 17px var(--sans);border-radius:14px;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.shoot svg{width:30px;height:30px}
+#bPhoto{background:var(--accent)}#bVideo{background:var(--accent2)}
+:root:not([data-theme="light"]) .shoot button{color:#fff}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn{padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px}
+.chk{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--text);text-transform:none;letter-spacing:0;margin:0}
+.chk input{width:20px;height:20px;margin:0}
+#msg{font-size:14px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card)}
+#msg.err{border-color:var(--err);color:var(--err)}#msg.ok{border-color:var(--ok);color:var(--ok)}#msg.warn{border-color:var(--warn);color:var(--warn)}
+.list{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center}
+.item img,.item .ph{width:64px;height:64px;object-fit:cover;border-radius:8px;background:var(--bg);display:block}
+.item .nm{font:12px/1.35 var(--mono);word-break:break-all}
+.item .row{margin-top:4px}
+details summary{cursor:pointer;font-weight:600}
+details ol{padding-left:20px;margin:8px 0 0;font-size:14px}
+details li{margin:4px 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <b>ГеоКамера</b>
+  <span class="chip" id="gpsChip"><span class="dot" id="gpsDot"></span><span id="gpsText">GPS іздеуде…</span></span>
+</header>
+<main>
+  <section class="card coords" aria-live="polite">
+    <div class="ll" id="ll">—</div>
+    <div class="xy" id="xy">GPS қосылуын күтіңіз</div>
+    <div class="row">
+      <select id="crs" aria-label="Координаттар жүйесі" style="flex:1;min-width:0">
+        <option value="USL">Shymkent_USL</option>
+        <option value="SK42">SK42</option>
+        <option value="UTM42">UTM42</option>
+      </select>
+      <button class="btn" id="bCopy">Көшіру</button>
+      <a class="btn" id="bMap" href="#" target="_blank" rel="noopener" style="text-decoration:none">Карта</a>
+    </div>
+  </section>
+
+  <section class="card" style="display:grid;gap:12px">
+    <div>
+      <label for="obj">Нысан аты (файл атына қосылады)</label>
+      <input type="text" id="obj" placeholder="мыс. Тұрар_Рысқұлов_12" autocomplete="off">
+    </div>
+    <label class="chk"><input type="checkbox" id="stamp" checked> Фотоға координат пен уақытты жазу</label>
+  </section>
+
+  <div class="shoot">
+    <button id="bPhoto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Фото</button>
+    <button id="bVideo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="12" height="12" rx="1"/><path d="M15 10l6-3v10l-6-3z"/></svg>Видео</button>
+  </div>
+  <input type="file" id="inPhoto" accept="image/*" capture="environment" hidden>
+  <input type="file" id="inVideo" accept="video/*" capture="environment" hidden>
+
+  <div id="msg" hidden></div>
+
+  <section class="card" id="listCard" hidden>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px"><b>Осы жолғы түсірілімдер</b><span class="meta" id="count"></span></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>Қалай жұмыс істейді</summary>
+      <ol>
+        <li>Chrome мәзірінен <b>«Басты экранға қосу» / «Установить приложение»</b> — ГеоКамера иконкасы пайда болады, интернетсіз де ашылады.</li>
+        <li>Алғаш ашқанда <b>орынға (геолокация)</b> рұқсат беріңіз. Жоғарыдағы белгі жасыл (±5 м-ден жақсы) болғанда түсіріңіз.</li>
+        <li>Фото не Видео басылғанда телефон камерасы ашылады. Түсіріп, «OK» басыңыз — файл координатпен <b>Downloads (Жүктеулер)</b> папкасына сақталады.</li>
+        <li>Координат үш жерге жазылады: фотоның EXIF-іне / видеоның метадерегіне, файл атына (<code>_N42.341700_E69.590100</code>) және (қосулы болса) суреттің өзіне.</li>
+        <li>Компьютерге USB кабельмен немесе Telegram-да <b>«Файл ретінде»</b> жіберіңіз, сосын GeoFoto бағдарламасына салыңыз.</li>
+      </ol>
+    </details>
+  </section>
+</main>
+
+<script>
+'use strict';
+// ===== Coordinate systems (same parameters as MAPLINK / KMLEXP.lsp and GeoFoto.html) =====
+const RHO = 180 / Math.PI, ASEC = Math.PI / 180 / 3600;
+const WGS = { a: 6378137, invf: 298.257223563 }, KRASS = { a: 6378245, invf: 298.3 };
+const MAPLINK_TOWGS = [25, -141, -78.5, 0, 0.35, 0.736, 0];
+const CRS = {
+  USL: { ell: KRASS, cm: 69.6026679959537, lat0: 0.116666666666666, k0: 1, fe: 610.533824462284, fn: -4672881.85225291, pv: MAPLINK_TOWGS },
+  SK42: { ell: KRASS, cm: 69, lat0: 0, k0: 1, fe: 500000, fn: 0, pv: MAPLINK_TOWGS },
+  UTM42: { ell: WGS, cm: 69, lat0: 0, k0: 0.9996, fe: 500000, fn: 0 },
+};
+function tmK(ell) {
+  if (ell._k) return ell._k;
+  const f = 1 / ell.invf, n = f / (2 - f), n2 = n * n, n3 = n2 * n, n4 = n3 * n;
+  return ell._k = { A: ell.a / (1 + n) * (1 + n2 / 4 + n4 / 64), e: Math.sqrt(f * (2 - f)),
+    al: [0, n / 2 - 2 * n2 / 3 + 5 * n3 / 16 + 41 * n4 / 180, 13 * n2 / 48 - 3 * n3 / 5 + 557 * n4 / 1440, 61 * n3 / 240 - 103 * n4 / 140, 49561 * n4 / 161280] };
+}
+function tmXY(p, l, ell) {
+  const { al, e } = tmK(ell);
+  const t = Math.sinh(Math.atanh(Math.sin(p)) - e * Math.atanh(e * Math.sin(p)));
+  const xi = Math.atan2(t, Math.cos(l)), eta = Math.atanh(Math.sin(l) / Math.sqrt(1 + t * t));
+  let x = xi, y = eta;
+  for (let j = 1; j <= 4; j++) { x += al[j] * Math.sin(2 * j * xi) * Math.cosh(2 * j * eta); y += al[j] * Math.cos(2 * j * xi) * Math.sinh(2 * j * eta); }
+  return [x, y];
+}
+function blh2xyz(lat, lon, ell) {
+  const f = 1 / ell.invf, e2 = f * (2 - f), p = lat / RHO, l = lon / RHO, N = ell.a / Math.sqrt(1 - e2 * Math.sin(p) ** 2);
+  return [N * Math.cos(p) * Math.cos(l), N * Math.cos(p) * Math.sin(l), N * (1 - e2) * Math.sin(p)];
+}
+function xyz2blh([X, Y, Z], ell) {
+  const f = 1 / ell.invf, e2 = f * (2 - f), p = Math.hypot(X, Y);
+  let lat = Math.atan2(Z, p * (1 - e2));
+  for (let i = 0; i < 10; i++) { const N = ell.a / Math.sqrt(1 - e2 * Math.sin(lat) ** 2), h = p / Math.cos(lat) - N; lat = Math.atan2(Z, p * (1 - e2 * N / (N + h))); }
+  return [lat * RHO, Math.atan2(Y, X) * RHO];
+}
+function pvInv([X, Y, Z], [dx, dy, dz, rx, ry, rz, ppm]) {
+  const s = 1 + ppm * 1e-6; rx *= ASEC; ry *= ASEC; rz *= ASEC;
+  const u = (X - dx) / s, v = (Y - dy) / s, w = (Z - dz) / s;
+  return [u + rz * v - ry * w, -rz * u + v + rx * w, ry * u - rx * v + w];
+}
+function project(key, lat, lon) {   // -> [E (AutoCAD X), N (AutoCAD Y)]
+  const cs = CRS[key];
+  if (cs.pv) [lat, lon] = xyz2blh(pvInv(blh2xyz(lat, lon, WGS), cs.pv), cs.ell);
+  const { A } = tmK(cs.ell), x0 = cs.lat0 ? tmXY(cs.lat0 / RHO, 0, cs.ell)[0] : 0;
+  const [x, y] = tmXY(lat / RHO, (lon - cs.cm) / RHO, cs.ell);
+  return [cs.fe + cs.k0 * A * y, cs.fn + cs.k0 * A * (x - x0)];
+}
+
+// ===== EXIF (JPEG) =====
+function readExifBasic(u) {
+  const out = {};
+  try {
+    const v = new DataView(u.buffer, u.byteOffset, u.byteLength);
+    let off = 2;
+    while (off + 4 <= v.byteLength) {
+      const m = v.getUint16(off); if ((m & 0xFF00) !== 0xFF00 || m === 0xFFDA) break;
+      const len = v.getUint16(off + 2);
+      if (m === 0xFFE1 && v.getUint32(off + 4) === 0x45786966) {
+        const t = off + 10, le = v.getUint16(t) === 0x4949, u16 = o => v.getUint16(t + o, le), u32 = o => v.getUint32(t + o, le);
+        const i0 = u32(4), n = u16(i0);
+        for (let i = 0; i < n; i++) {
+          const e = i0 + 2 + i * 12, tag = u16(e), cnt = u32(e + 4), at = cnt > 4 ? u32(e + 8) : e + 8;
+          const ascii = () => { let s = ''; for (let k = 0; k < cnt; k++) { const c = v.getUint8(t + at + k); if (!c) break; s += String.fromCharCode(c); } return s; };
+          if (tag === 0x0112) out.orientation = u16(e + 8);
+          if (tag === 0x010F) out.make = ascii();
+          if (tag === 0x0110) out.model = ascii();
+        }
+        break;
+      }
+      off += 2 + len;
+    }
+  } catch (e) {}
+  return out;
+}
+// Little-endian TIFF with IFD0, Exif IFD and GPS IFD
+function buildExif({ lat, lon, alt, acc, when, make, model, orientation }) {
+  const A = 2, S = 3, L = 4, R = 5, B = 1;
+  const rat = x => { const d = 1e6; return [Math.round(x * d), d]; };
+  const dms = x => { x = Math.abs(x); const d = Math.floor(x), m = Math.floor((x - d) * 60), s = (x - d - m / 60) * 3600; return [[d, 1], [m, 1], [Math.round(s * 1e5), 1e5]]; };
+  const loc = `${when.getFullYear()}:${pad(when.getMonth() + 1)}:${pad(when.getDate())} ${pad(when.getHours())}:${pad(when.getMinutes())}:${pad(when.getSeconds())}`;
+  const ifd0 = [[0x0112, S, [orientation || 1]], [0x0132, A, loc], [0x0131, A, 'GeoKamera'], [0x8769, L, [0]], [0x8825, L, [0]]];
+  if (make) ifd0.push([0x010F, A, make]);
+  if (model) ifd0.push([0x0110, A, model]);
+  const exif = [[0x9003, A, loc], [0x9004, A, loc]];
+  const gps = [[0x0000, B, [2, 3, 0, 0]], [0x0001, A, lat < 0 ? 'S' : 'N'], [0x0002, R, dms(lat)], [0x0003, A, lon < 0 ? 'W' : 'E'], [0x0004, R, dms(lon)],
+    [0x0007, R, [[when.getUTCHours(), 1], [when.getUTCMinutes(), 1], [when.getUTCSeconds(), 1]]],
+    [0x001D, A, `${when.getUTCFullYear()}:${pad(when.getUTCMonth() + 1)}:${pad(when.getUTCDate())}`]];
+  if (alt !== null && alt !== undefined && isFinite(alt)) gps.push([0x0005, B, [alt < 0 ? 1 : 0]], [0x0006, R, [rat(Math.abs(alt))]]);
+  if (acc && isFinite(acc)) gps.push([0x001F, R, [rat(acc)]]);
+  const ifds = [ifd0, exif, gps].map(e => e.sort((a, b) => a[0] - b[0]));
+  const enc = (type, val) => {
+    if (type === A) { const s = String(val).replace(/[^\x20-\x7E]/g, '?'); const u = new Uint8Array(s.length + 1); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return [u, u.length]; }
+    if (type === B) return [Uint8Array.from(val), val.length];
+    const sz = type === S ? 2 : type === L ? 4 : 8, u = new Uint8Array(val.length * sz), dv = new DataView(u.buffer);
+    val.forEach((x, i) => { if (type === S) dv.setUint16(i * 2, x, true); else if (type === L) dv.setUint32(i * 4, x, true); else { dv.setUint32(i * 8, x[0], true); dv.setUint32(i * 8 + 4, x[1], true); } });
+    return [u, val.length];
+  };
+  const sizes = ifds.map(e => 2 + 12 * e.length + 4), offs = [8, 8 + sizes[0], 8 + sizes[0] + sizes[1]];
+  for (const e of ifd0) { if (e[0] === 0x8769) e[2] = [offs[1]]; if (e[0] === 0x8825) e[2] = [offs[2]]; }
+  let data = offs[2] + sizes[2];
+  const chunks = [], encoded = ifds.map(list => list.map(([tag, type, val]) => {
+    const [bytes, cnt] = enc(type, val); let at = null;
+    if (bytes.length > 4) { at = data; chunks.push([at, bytes]); data += bytes.length + (bytes.length & 1); }
+    return { tag, type, cnt, bytes, at };
+  }));
+  const buf = new Uint8Array(data), dv = new DataView(buf.buffer);
+  buf.set([0x49, 0x49, 0x2A, 0x00]); dv.setUint32(4, 8, true);
+  encoded.forEach((list, k) => {
+    let o = offs[k]; dv.setUint16(o, list.length, true); o += 2;
+    for (const e of list) {
+      dv.setUint16(o, e.tag, true); dv.setUint16(o + 2, e.type, true); dv.setUint32(o + 4, e.cnt, true);
+      if (e.at === null) buf.set(e.bytes, o + 8); else dv.setUint32(o + 8, e.at, true);
+      o += 12;
+    }
+    dv.setUint32(o, 0, true);
+  });
+  for (const [at, bytes] of chunks) buf.set(bytes, at);
+  const seg = new Uint8Array(10 + buf.length), sv = new DataView(seg.buffer);
+  sv.setUint16(0, 0xFFE1); sv.setUint16(2, 8 + buf.length); seg.set([0x45, 0x78, 0x69, 0x66, 0, 0], 4); seg.set(buf, 10);
+  return seg;
+}
+// Drop the old Exif APP1, put ours after SOI/JFIF
+function replaceExif(u, seg) {
+  if (u[0] !== 0xFF || u[1] !== 0xD8) throw new Error('JPEG емес');
+  const keep = []; let off = 2, jfif = null;
+  while (off + 4 <= u.length) {
+    if (u[off] !== 0xFF) throw new Error('JPEG құрылымы бүлінген');
+    const m = u[off + 1];
+    if (m === 0xDA) break;
+    const len = (u[off + 2] << 8) | u[off + 3], s = u.subarray(off, off + 2 + len);
+    const isExif = m === 0xE1 && s[4] === 0x45 && s[5] === 0x78 && s[6] === 0x69 && s[7] === 0x66;
+    if (m === 0xE0 && !jfif && !keep.length) jfif = s; else if (!isExif) keep.push(s);
+    off += 2 + len;
+  }
+  return new Blob([u.subarray(0, 2), ...(jfif ? [jfif] : []), seg, ...keep, u.subarray(off)], { type: 'image/jpeg' });
+}
+
+// ===== MP4 / MOV: write udta/©xyz (Android format, read by Google Photos and GeoFoto) =====
+const str4 = (u, o) => String.fromCharCode(u[o], u[o + 1], u[o + 2], u[o + 3]);
+function boxes(u, start, end) {
+  const out = [];
+  for (let o = start; o + 8 <= end;) {
+    const dv = new DataView(u.buffer, u.byteOffset + o);
+    let size = dv.getUint32(0), hdr = 8;
+    if (size === 1) { size = dv.getUint32(8) * 2 ** 32 + dv.getUint32(12); hdr = 16; } else if (size === 0) size = end - o;
+    if (size < hdr || o + size > end) break;
+    out.push({ type: str4(u, o + 4), off: o, size, hdr });
+    o += size;
+  }
+  return out;
+}
+async function topBoxes(file) {
+  const out = [];
+  for (let o = 0; o + 8 <= file.size;) {
+    const dv = new DataView(await file.slice(o, o + 16).arrayBuffer());
+    let size = dv.getUint32(0), hdr = 8;
+    if (size === 1) { size = dv.getUint32(8) * 2 ** 32 + dv.getUint32(12); hdr = 16; } else if (size === 0) size = file.size - o;
+    if (size < 8) break;
+    const t = new Uint8Array(dv.buffer, 4, 4);
+    out.push({ type: String.fromCharCode(...t), off: o, size, hdr });
+    o += size;
+  }
+  return out;
+}
+function mkBox(type, ...parts) {
+  const len = 8 + parts.reduce((s, p) => s + p.length, 0), u = new Uint8Array(len);
+  new DataView(u.buffer).setUint32(0, len);
+  for (let i = 0; i < 4; i++) u[4 + i] = type.charCodeAt(i);
+  let o = 8; for (const p of parts) { u.set(p, o); o += p.length; }
+  return u;
+}
+function iso6709(lat, lon, alt) {
+  const f = (x, w) => (x < 0 ? '-' : '+') + Math.abs(x).toFixed(6).padStart(w, '0');
+  return f(lat, 9) + f(lon, 10) + (alt !== null && alt !== undefined && isFinite(alt) ? (alt < 0 ? '-' : '+') + Math.abs(alt).toFixed(1) : '') + '/';
+}
+async function tagVideo(file, lat, lon, alt) {
+  const tops = await topBoxes(file), moov = tops.find(b => b.type === 'moov');
+  if (!moov || moov.size > 200e6) return null;
+  const mb = new Uint8Array(await file.slice(moov.off, moov.off + moov.size).arrayBuffer());
+  const s = iso6709(lat, lon, alt), payload = new Uint8Array(4 + s.length);
+  new DataView(payload.buffer).setUint16(0, s.length); new DataView(payload.buffer).setUint16(2, 0x15C7);
+  for (let i = 0; i < s.length; i++) payload[4 + i] = s.charCodeAt(i);
+  const xyz = mkBox('\xA9xyz', payload);
+  const kids = boxes(mb, moov.hdr, mb.length), parts = [];
+  let hadUdta = false;
+  for (const k of kids) {
+    const raw = mb.subarray(k.off, k.off + k.size);
+    if (k.type === 'udta') {
+      hadUdta = true;
+      const inner = boxes(mb, k.off + k.hdr, k.off + k.size).filter(c => c.type !== '\xA9xyz').map(c => mb.subarray(c.off, c.off + c.size));
+      parts.push(mkBox('udta', xyz, ...inner));
+    } else parts.push(raw);
+  }
+  if (!hadUdta) parts.push(mkBox('udta', xyz));
+  const nm = mkBox('moov', ...parts), delta = nm.length - moov.size;
+  // moov before the media data: shift every chunk offset by the size change
+  if (delta && tops.some(b => b.type === 'mdat' && b.off > moov.off)) {
+    const walk = (start, end) => {
+      for (const b of boxes(nm, start, end)) {
+        if (['trak', 'mdia', 'minf', 'stbl'].includes(b.type)) walk(b.off + b.hdr, b.off + b.size);
+        else if (b.type === 'stco' || b.type === 'co64') {
+          const dv = new DataView(nm.buffer, b.off + b.hdr), n = dv.getUint32(4);
+          for (let i = 0; i < n; i++) {
+            if (b.type === 'stco') { const v = dv.getUint32(8 + i * 4); if (v > moov.off) dv.setUint32(8 + i * 4, v + delta); }
+            else { const v = dv.getUint32(8 + i * 8) * 2 ** 32 + dv.getUint32(12 + i * 8); if (v > moov.off) { const w = v + delta; dv.setUint32(8 + i * 8, Math.floor(w / 2 ** 32)); dv.setUint32(12 + i * 8, w >>> 0); } }
+          }
+        }
+      }
+    };
+    walk(8, nm.length);
+  }
+  return new Blob([file.slice(0, moov.off), nm, file.slice(moov.off + moov.size)], { type: file.type || 'video/mp4' });
+}
+
+// ===== GPS =====
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+let fixes = [], last = null, gpsError = '';
+function onFix(p) {
+  last = { lat: p.coords.latitude, lon: p.coords.longitude, alt: p.coords.altitude, acc: p.coords.accuracy, t: p.timestamp || Date.now() };
+  fixes.push(last);
+  const cut = Date.now() - 180000; fixes = fixes.filter(f => f.t >= cut);
+  if (gpsError && $('msg').classList.contains('err')) say('');
+  gpsError = '';
+  showGps();
+}
+function onGpsErr(e) {
+  gpsError = e.code === 1 ? 'Орынға рұқсат жоқ' : e.code === 3 ? 'GPS сигналы жоқ' : 'GPS қатесі';
+  showGps();
+  if (e.code === 1) say('Геолокацияға рұқсат беріңіз: Chrome → адрес жолындағы құлып белгісі → Рұқсаттар → Орын.', 'err');
+}
+function accClass(a) { return a <= 5 ? 'ok' : a <= 15 ? 'warn' : 'err'; }
+function showGps() {
+  const fresh = last && Date.now() - last.t < 30000;
+  $('gpsDot').className = 'dot ' + (last && fresh ? accClass(last.acc) : gpsError ? 'err' : '');
+  $('gpsText').textContent = gpsError || (last ? `±${last.acc < 10 ? last.acc.toFixed(1) : Math.round(last.acc)} м${fresh ? '' : ' (ескі)'}` : 'GPS іздеуде…');
+  if (!last) return;
+  $('ll').textContent = `${last.lat.toFixed(7)}, ${last.lon.toFixed(7)}`;
+  const k = $('crs').value, [E, N] = project(k, last.lat, last.lon);
+  $('xy').innerHTML = `${k}: X <b>${E.toFixed(3)}</b> · Y <b>${N.toFixed(3)}</b>${last.alt !== null && last.alt !== undefined ? ` · H ${last.alt.toFixed(1)} м` : ''}`;
+  $('bMap').href = `https://www.google.com/maps?q=${last.lat.toFixed(7)},${last.lon.toFixed(7)}`;
+}
+function startGps() {
+  if (!('geolocation' in navigator)) { gpsError = 'GPS қолдау жоқ'; showGps(); return; }
+  if (!window.isSecureContext) { gpsError = 'HTTPS қажет'; showGps(); say('Геолокация тек HTTPS сілтемесі арқылы жұмыс істейді (мыс. GitHub Pages).', 'err'); return; }
+  navigator.geolocation.watchPosition(onFix, onGpsErr, { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 });
+}
+setInterval(showGps, 5000);
+// best fix from shortly before the shutter press until now
+function fixFor(pressT) {
+  const c = fixes.filter(f => f.t >= pressT - 20000);
+  if (c.length) return c.reduce((a, b) => (b.acc < a.acc ? b : a));
+  return last && Date.now() - last.t < 300000 ? last : null;
+}
+
+// ===== Capture =====
+function say(text, cls) { const m = $('msg'); m.hidden = !text; m.textContent = text || ''; m.className = cls || ''; }
+const stampName = d => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+function objPart() { const s = $('obj').value.trim().replace(/[\\/:*?"<>|#%]+/g, '').replace(/\s+/g, '_'); return s ? s + '_' : ''; }
+function fileName(kind, when, fix, ext) {
+  const ll = fix ? `_${fix.lat < 0 ? 'S' : 'N'}${Math.abs(fix.lat).toFixed(6)}_${fix.lon < 0 ? 'W' : 'E'}${Math.abs(fix.lon).toFixed(6)}` : '_NOGPS';
+  return `${objPart()}${kind}_${stampName(when)}${ll}.${ext}`;
+}
+async function stampPhoto(file, fix, when) {
+  const bm = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height;
+  const g = c.getContext('2d'); g.drawImage(bm, 0, 0); bm.close();
+  const k = $('crs').value, [E, N] = project(k, fix.lat, fix.lon), obj = $('obj').value.trim();
+  const lines = [obj, `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())} ${pad(when.getHours())}:${pad(when.getMinutes())}:${pad(when.getSeconds())}   ±${fix.acc.toFixed(1)} м`,
+    `WGS-84: ${fix.lat.toFixed(7)}, ${fix.lon.toFixed(7)}${fix.alt !== null && fix.alt !== undefined ? `   H ${fix.alt.toFixed(1)} м` : ''}`, `${k}: X ${E.toFixed(3)}   Y ${N.toFixed(3)}`].filter(Boolean);
+  const fs = Math.max(14, Math.round(Math.min(c.width, c.height) / 30)), lh = fs * 1.35, padd = fs * 0.7, bh = lines.length * lh + padd * 2;
+  g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(0, c.height - bh, c.width, bh);
+  g.font = `600 ${fs}px system-ui, sans-serif`; g.fillStyle = '#fff'; g.textBaseline = 'top';
+  lines.forEach((t, i) => g.fillText(t, padd, c.height - bh + padd + i * lh));
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+  c.width = c.height = 0;
+  return new Uint8Array(await blob.arrayBuffer());
+}
+async function handlePhoto(file, pressT) {
+  const when = new Date(), fix = fixFor(pressT);
+  let bytes = new Uint8Array(await file.arrayBuffer()), out, note = '';
+  if (!fix) { out = new Blob([bytes], { type: 'image/jpeg' }); note = 'GPS болмады — координатсыз сақталды'; }
+  else {
+    const old = readExifBasic(bytes);
+    let orientation = old.orientation;
+    if ($('stamp').checked) {
+      try { bytes = await stampPhoto(file, fix, when); orientation = 1; } catch (e) { note = 'Суретке жазу мүмкін болмады (жады аз), координат EXIF-те'; }
+    }
+    try { out = replaceExif(bytes, buildExif({ ...fix, when, make: old.make, model: old.model, orientation })); }
+    catch (e) { out = new Blob([bytes], { type: 'image/jpeg' }); note = 'EXIF жазылмады: ' + e.message; }
+  }
+  return { blob: out, name: fileName('IMG', when, fix, 'jpg'), kind: 'photo', fix, note };
+}
+async function handleVideo(file, pressT) {
+  const when = new Date(), fix = fixFor(pressT), ext = (file.name.match(/\.(\w+)$/) || [, 'mp4'])[1].toLowerCase();
+  let out = file, note = '';
+  if (!fix) note = 'GPS болмады — координатсыз сақталды';
+  else {
+    try { const t = await tagVideo(file, fix.lat, fix.lon, fix.alt); if (t) out = t; else note = 'Видео метадерегіне жазылмады, координат файл атында'; }
+    catch (e) { note = 'Видео метадерегіне жазылмады, координат файл атында'; }
+  }
+  return { blob: out, name: fileName('VID', when, fix, ext), kind: 'video', fix, note };
+}
+
+function save(item) {
+  const a = document.createElement('a'), url = URL.createObjectURL(item.blob);
+  a.href = url; a.download = item.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+async function share(item) {
+  const f = new File([item.blob], item.name, { type: item.blob.type });
+  if (navigator.canShare && navigator.canShare({ files: [f] })) {
+    try { await navigator.share({ files: [f], title: item.name }); } catch (e) {}
+  } else say('Бұл телефон файлмен бөлісуді қолдамайды — «Сақтау» батырмасын басыңыз.', 'warn');
+}
+
+const shots = [];
+function renderList() {
+  $('listCard').hidden = !shots.length;
+  $('count').textContent = shots.length + ' файл';
+  const box = $('list'); box.textContent = '';
+  for (const it of shots.slice().reverse()) {
+    const row = document.createElement('div'); row.className = 'item';
+    const th = document.createElement(it.thumb ? 'img' : 'div'); th.className = 'ph'; if (it.thumb) th.src = it.thumb;
+    const info = document.createElement('div');
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
+    info.appendChild(nm);
+    if (it.note) { const n = document.createElement('div'); n.className = 'meta'; n.style.color = 'var(--warn)'; n.textContent = it.note; info.appendChild(n); }
+    const r = document.createElement('div'); r.className = 'row';
+    const b1 = document.createElement('button'); b1.className = 'btn'; b1.textContent = 'Сақтау'; b1.onclick = () => save(it);
+    const b2 = document.createElement('button'); b2.className = 'btn'; b2.textContent = 'Бөлісу'; b2.onclick = () => share(it);
+    r.append(b1, b2); info.appendChild(r);
+    row.append(th, info); box.appendChild(row);
+  }
+}
+async function thumbOf(it) {
+  try {
+    let src;
+    if (it.kind === 'photo') src = await createImageBitmap(it.blob, { resizeWidth: 160 });
+    else return null;
+    const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; c.getContext('2d').drawImage(src, 0, 0);
+    return c.toDataURL('image/jpeg', 0.7);
+  } catch (e) { return null; }
+}
+
+let pressT = 0;
+$('bPhoto').onclick = () => { pressT = Date.now(); $('inPhoto').click(); };
+$('bVideo').onclick = () => { pressT = Date.now(); $('inVideo').click(); };
+for (const [id, fn] of [['inPhoto', handlePhoto], ['inVideo', handleVideo]]) {
+  $(id).onchange = async e => {
+    const file = e.target.files[0]; e.target.value = '';
+    if (!file) return;
+    say('Координат жазылуда…');
+    try {
+      const it = await fn(file, pressT);
+      it.thumb = await thumbOf(it);
+      shots.push(it); renderList();
+      save(it);
+      say(it.note ? it.note : `Сақталды: ${it.name}`, it.note ? 'warn' : 'ok');
+    } catch (err) { say('Қате: ' + err.message, 'err'); }
+  };
+}
+$('bCopy').onclick = async () => {
+  if (!last) return;
+  const k = $('crs').value, [E, N] = project(k, last.lat, last.lon);
+  const t = `${last.lat.toFixed(7)}, ${last.lon.toFixed(7)}\n${k}: X ${E.toFixed(3)} Y ${N.toFixed(3)}`;
+  try { await navigator.clipboard.writeText(t); say('Координат көшірілді', 'ok'); } catch (e) { say(t); }
+};
+
+// ===== Settings =====
+const KEY = 'geokamera.v1';
+try { const s = JSON.parse(localStorage.getItem(KEY)) || {}; if (s.crs) $('crs').value = s.crs; if (s.obj) $('obj').value = s.obj; if (s.stamp === false) $('stamp').checked = false; } catch (e) {}
+function persist() { try { localStorage.setItem(KEY, JSON.stringify({ crs: $('crs').value, obj: $('obj').value, stamp: $('stamp').checked })); } catch (e) {} }
+for (const id of ['crs', 'obj', 'stamp']) $(id).addEventListener('change', () => { persist(); showGps(); });
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+startGps();
+window.GK = { buildExif, replaceExif, tagVideo, project, onFix, handlePhoto, handleVideo, fileName };
+</script>
+</body>
+</html>
