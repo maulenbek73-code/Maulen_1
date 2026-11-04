@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ULDAR GeoFoto</title>
+<title>ГеоКамера</title>
 <meta name="theme-color" content="#0f3d2e">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -51,10 +51,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .item img,.item .ph{width:64px;height:64px;object-fit:cover;border-radius:8px;background:var(--bg);display:block}
 .item .nm{font:12px/1.35 var(--mono);word-break:break-all}
 .item .row{margin-top:4px}
-.item .tm{font-weight:700;font-variant-numeric:tabular-nums}
-.maps{display:flex;gap:6px;flex-wrap:wrap}
-.maps a{font-size:13px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--text);text-decoration:none;background:var(--bg)}
-.maps a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 details summary{cursor:pointer;font-weight:600}
 details ol{padding-left:20px;margin:8px 0 0;font-size:14px}
 details li{margin:4px 0}
@@ -63,7 +59,7 @@ details li{margin:4px 0}
 </head>
 <body>
 <header>
-  <b>ULDAR GeoFoto</b>
+  <b>ГеоКамера</b>
   <span class="chip" id="gpsChip"><span class="dot" id="gpsDot"></span><span id="gpsText">GPS іздеуде…</span></span>
 </header>
 <main>
@@ -77,8 +73,8 @@ details li{margin:4px 0}
         <option value="UTM42">UTM42</option>
       </select>
       <button class="btn" id="bCopy">Көшіру</button>
+      <a class="btn" id="bMap" href="#" target="_blank" rel="noopener" style="text-decoration:none">Карта</a>
     </div>
-    <div class="maps" id="hereMaps"></div>
   </section>
 
   <section class="card" style="display:grid;gap:12px">
@@ -99,11 +95,7 @@ details li{margin:4px 0}
   <div id="msg" hidden></div>
 
   <section class="card" id="listCard" hidden>
-    <div class="row" style="justify-content:space-between;margin-bottom:10px"><b>Түсірілімдер</b><span class="meta" id="count"></span></div>
-    <div class="row" style="margin-bottom:12px">
-      <a class="btn" id="allYandex" href="#" target="_blank" rel="noopener" style="text-decoration:none">Барлығы Yandex картада</a>
-      <button class="btn" id="bClear">Тізімді тазалау</button>
-    </div>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px"><b>Осы жолғы түсірілімдер</b><span class="meta" id="count"></span></div>
     <div class="list" id="list"></div>
   </section>
 
@@ -111,12 +103,11 @@ details li{margin:4px 0}
     <details>
       <summary>Қалай жұмыс істейді</summary>
       <ol>
-        <li>Chrome мәзірінен <b>«Басты экранға қосу» / «Установить приложение»</b> — ULDAR GeoFoto иконкасы пайда болады, интернетсіз де ашылады.</li>
+        <li>Chrome мәзірінен <b>«Басты экранға қосу» / «Установить приложение»</b> — ГеоКамера иконкасы пайда болады, интернетсіз де ашылады.</li>
         <li>Алғаш ашқанда <b>орынға (геолокация)</b> рұқсат беріңіз. Жоғарыдағы белгі жасыл (±5 м-ден жақсы) болғанда түсіріңіз.</li>
         <li>Фото не Видео басылғанда телефон камерасы ашылады. Түсіріп, «OK» басыңыз — файл координатпен <b>Downloads (Жүктеулер)</b> папкасына сақталады.</li>
         <li>Координат үш жерге жазылады: фотоның EXIF-іне / видеоның метадерегіне, файл атына (<code>_N42.341700_E69.590100</code>) және (қосулы болса) суреттің өзіне.</li>
-        <li>Әр түсірілімнің жанындағы <b>Google / Yandex / 2GIS</b> сол нүктені картада ашады. «Барлығы Yandex картада» — барлық нүкте нөмірімен (нөмір → тізімдегі уақыт).</li>
-        <li>Компьютерге USB кабельмен немесе Telegram-да <b>«Файл ретінде»</b> жіберіңіз, сосын AutoCAD-та <b>GEOFOTO</b> командасы (Mgeo) немесе GeoFoto.html.</li>
+        <li>Компьютерге USB кабельмен немесе Telegram-да <b>«Файл ретінде»</b> жіберіңіз, сосын GeoFoto бағдарламасына салыңыз.</li>
       </ol>
     </details>
   </section>
@@ -362,55 +353,20 @@ function showGps() {
   $('ll').textContent = `${last.lat.toFixed(7)}, ${last.lon.toFixed(7)}`;
   const k = $('crs').value, [E, N] = project(k, last.lat, last.lon);
   $('xy').innerHTML = `${k}: X <b>${E.toFixed(3)}</b> · Y <b>${N.toFixed(3)}</b>${last.alt !== null && last.alt !== undefined ? ` · H ${last.alt.toFixed(1)} м` : ''}`;
-  mapLinks($('hereMaps'), last.lat, last.lon);
-}
-// Google / Yandex / 2GIS: the phone opens each link in that map's app when it is installed
-function mapUrls(lat, lon) {
-  const la = lat.toFixed(7), lo = lon.toFixed(7);
-  return [['Google', `https://www.google.com/maps/search/?api=1&query=${la},${lo}`],
-    ['Yandex', `https://yandex.kz/maps/?pt=${lo},${la},pm2rdl&z=18&l=map`],
-    ['2GIS', `https://2gis.kz/search/${la}%2C${lo}`]];
-}
-function mapLinks(box, lat, lon) {
-  const urls = mapUrls(lat, lon);
-  if (box.dataset.ll === urls[0][1]) return;
-  box.dataset.ll = urls[0][1]; box.textContent = '';
-  for (const [t, u] of urls) { const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.textContent = t; box.appendChild(a); }
+  $('bMap').href = `https://www.google.com/maps?q=${last.lat.toFixed(7)},${last.lon.toFixed(7)}`;
 }
 function startGps() {
   if (!('geolocation' in navigator)) { gpsError = 'GPS қолдау жоқ'; showGps(); return; }
   if (!window.isSecureContext) { gpsError = 'HTTPS қажет'; showGps(); say('Геолокация тек HTTPS сілтемесі арқылы жұмыс істейді (мыс. GitHub Pages).', 'err'); return; }
-  rewatch();
+  navigator.geolocation.watchPosition(onFix, onGpsErr, { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 });
 }
 setInterval(showGps, 5000);
-// While the camera app is open this page is in the background and Android pauses GPS,
-// so fixes from before the shutter can be tens of metres behind. After the camera returns,
-// wait for a NEW fix (the phone is still where the shot was taken) instead of reusing an old one.
-let watchId = null;
-function rewatch() {
-  if (!('geolocation' in navigator) || !window.isSecureContext) return;
-  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-  watchId = navigator.geolocation.watchPosition(onFix, onGpsErr, { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 });
-  navigator.geolocation.getCurrentPosition(onFix, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
-}
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') rewatch(); });
-async function freshFix(returnT, waitMs = 12000) {
-  rewatch();
-  const end = Date.now() + waitMs;
-  while (Date.now() < end) {
-    const c = fixes.filter(f => f.t >= returnT - 1000);
-    const good = c.filter(f => f.acc <= 12);
-    if (good.length) return good[good.length - 1];
-    if (c.length && Date.now() > end - waitMs / 2) return c.reduce((a, b) => (b.acc < a.acc ? b : a));
-    say(`GPS жаңартылуда… ${Math.ceil((end - Date.now()) / 1000)} с`);
-    await new Promise(r => setTimeout(r, 400));
-  }
-  const c = fixes.filter(f => f.t >= returnT - 1000);
+// best fix from shortly before the shutter press until now
+function fixFor(pressT) {
+  const c = fixes.filter(f => f.t >= pressT - 20000);
   if (c.length) return c.reduce((a, b) => (b.acc < a.acc ? b : a));
-  if (!last) return null;
-  return { ...last, stale: Math.round((Date.now() - last.t) / 1000) };   // newest old fix, marked as old
+  return last && Date.now() - last.t < 300000 ? last : null;
 }
-function staleNote(fix) { return fix && fix.stale ? `Назар аударыңыз: GPS жаңармады, координат ${fix.stale} с бұрынғы — қате болуы мүмкін` : ''; }
 
 // ===== Capture =====
 function say(text, cls) { const m = $('msg'); m.hidden = !text; m.textContent = text || ''; m.className = cls || ''; }
@@ -435,8 +391,9 @@ async function stampPhoto(file, fix, when) {
   c.width = c.height = 0;
   return new Uint8Array(await blob.arrayBuffer());
 }
-async function handlePhoto(file, when, fix) {
-  let bytes = new Uint8Array(await file.arrayBuffer()), out, note = staleNote(fix);
+async function handlePhoto(file, pressT) {
+  const when = new Date(), fix = fixFor(pressT);
+  let bytes = new Uint8Array(await file.arrayBuffer()), out, note = '';
   if (!fix) { out = new Blob([bytes], { type: 'image/jpeg' }); note = 'GPS болмады — координатсыз сақталды'; }
   else {
     const old = readExifBasic(bytes);
@@ -449,9 +406,9 @@ async function handlePhoto(file, when, fix) {
   }
   return { blob: out, name: fileName('IMG', when, fix, 'jpg'), kind: 'photo', fix, note };
 }
-async function handleVideo(file, when, fix) {
-  const ext = (file.name.match(/\.(\w+)$/) || [, 'mp4'])[1].toLowerCase();
-  let out = file, note = staleNote(fix);
+async function handleVideo(file, pressT) {
+  const when = new Date(), fix = fixFor(pressT), ext = (file.name.match(/\.(\w+)$/) || [, 'mp4'])[1].toLowerCase();
+  let out = file, note = '';
   if (!fix) note = 'GPS болмады — координатсыз сақталды';
   else {
     try { const t = await tagVideo(file, fix.lat, fix.lon, fix.alt); if (t) out = t; else note = 'Видео метадерегіне жазылмады, координат файл атында'; }
@@ -472,57 +429,29 @@ async function share(item) {
   } else say('Бұл телефон файлмен бөлісуді қолдамайды — «Сақтау» батырмасын басыңыз.', 'warn');
 }
 
-// The list (without the files) is kept on the phone, so map links work after the app restarts
-const SHOTS_KEY = 'geokamera.shots';
-let shots = [];
-try { shots = JSON.parse(localStorage.getItem(SHOTS_KEY)) || []; } catch (e) {}
-function persistShots() {
-  const keep = shots.slice(-150).map(({ blob, ...m }) => m);
-  try { localStorage.setItem(SHOTS_KEY, JSON.stringify(keep)); } catch (e) {
-    try { localStorage.setItem(SHOTS_KEY, JSON.stringify(keep.map(({ thumb, ...m }) => m))); } catch (e2) {}
-  }
-}
-// all points on one Yandex map: numbered markers (blue photo, red video)
-function yandexAll() {
-  const pts = shots.filter(s => s.lat !== undefined).slice(-99);
-  if (!pts.length) return '#';
-  const pt = pts.map((s, i) => `${s.lon.toFixed(7)},${s.lat.toFixed(7)},pm2${s.kind === 'video' ? 'rd' : 'bl'}l${shots.indexOf(s) + 1 <= 99 ? shots.indexOf(s) + 1 : ''}`).join('~');
-  return `https://yandex.kz/maps/?pt=${pt}&l=map`;
-}
+const shots = [];
 function renderList() {
   $('listCard').hidden = !shots.length;
   $('count').textContent = shots.length + ' файл';
-  $('allYandex').href = yandexAll();
   const box = $('list'); box.textContent = '';
-  shots.forEach((it, idx) => {
+  for (const it of shots.slice().reverse()) {
     const row = document.createElement('div'); row.className = 'item';
     const th = document.createElement(it.thumb ? 'img' : 'div'); th.className = 'ph'; if (it.thumb) th.src = it.thumb;
     const info = document.createElement('div');
-    const tm = document.createElement('div'); tm.className = 'tm';
-    tm.textContent = `№${idx + 1} · ${it.time || ''} · ${it.kind === 'video' ? 'видео' : 'фото'}`;
-    const nm = document.createElement('div'); nm.className = 'nm meta'; nm.textContent = it.name;
-    info.append(tm, nm);
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
+    info.appendChild(nm);
     if (it.note) { const n = document.createElement('div'); n.className = 'meta'; n.style.color = 'var(--warn)'; n.textContent = it.note; info.appendChild(n); }
-    if (it.lat !== undefined) { const m = document.createElement('div'); m.className = 'maps'; m.style.marginTop = '6px'; mapLinks(m, it.lat, it.lon); info.appendChild(m); }
-    if (it.blob) {
-      const r = document.createElement('div'); r.className = 'row';
-      const b1 = document.createElement('button'); b1.className = 'btn'; b1.textContent = 'Сақтау'; b1.onclick = () => save(it);
-      const b2 = document.createElement('button'); b2.className = 'btn'; b2.textContent = 'Бөлісу'; b2.onclick = () => share(it);
-      r.append(b1, b2); info.appendChild(r);
-    }
-    row.append(th, info); box.prepend(row);
-  });
+    const r = document.createElement('div'); r.className = 'row';
+    const b1 = document.createElement('button'); b1.className = 'btn'; b1.textContent = 'Сақтау'; b1.onclick = () => save(it);
+    const b2 = document.createElement('button'); b2.className = 'btn'; b2.textContent = 'Бөлісу'; b2.onclick = () => share(it);
+    r.append(b1, b2); info.appendChild(r);
+    row.append(th, info); box.appendChild(row);
+  }
 }
-let clearArmed = false;
-$('bClear').onclick = () => {
-  if (!clearArmed) { clearArmed = true; $('bClear').textContent = 'Иә, тізімді өшіру'; setTimeout(() => { clearArmed = false; $('bClear').textContent = 'Тізімді тазалау'; }, 4000); return; }
-  shots = []; persistShots(); renderList(); clearArmed = false; $('bClear').textContent = 'Тізімді тазалау';
-  say('Тізім тазаланды. Файлдар Downloads папкасында қалды.', 'ok');
-};
 async function thumbOf(it) {
   try {
     let src;
-    if (it.kind === 'photo') src = await createImageBitmap(it.blob, { resizeWidth: 96 });
+    if (it.kind === 'photo') src = await createImageBitmap(it.blob, { resizeWidth: 160 });
     else return null;
     const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; c.getContext('2d').drawImage(src, 0, 0);
     return c.toDataURL('image/jpeg', 0.7);
@@ -534,21 +463,13 @@ $('bPhoto').onclick = () => { pressT = Date.now(); $('inPhoto').click(); };
 $('bVideo').onclick = () => { pressT = Date.now(); $('inVideo').click(); };
 for (const [id, fn] of [['inPhoto', handlePhoto], ['inVideo', handleVideo]]) {
   $(id).onchange = async e => {
-    const file = e.target.files[0], returnT = Date.now(); e.target.value = '';
+    const file = e.target.files[0]; e.target.value = '';
     if (!file) return;
-    // shutter time = when the camera app wrote the file (falls back to now)
-    const lm = file.lastModified, now = new Date(lm && lm >= pressT - 5000 && lm <= returnT + 5000 ? lm : returnT);
-    say('GPS жаңартылуда…');
+    say('Координат жазылуда…');
     try {
-      const fix = await freshFix(returnT);
-      say('Координат жазылуда…');
-      const it = await fn(file, now, fix);
+      const it = await fn(file, pressT);
       it.thumb = await thumbOf(it);
-      it.time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-      it.date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-      if (it.fix) { it.lat = it.fix.lat; it.lon = it.fix.lon; }
-      delete it.fix;
-      shots.push(it); persistShots(); renderList();
+      shots.push(it); renderList();
       save(it);
       say(it.note ? it.note : `Сақталды: ${it.name}`, it.note ? 'warn' : 'ok');
     } catch (err) { say('Қате: ' + err.message, 'err'); }
@@ -568,9 +489,8 @@ function persist() { try { localStorage.setItem(KEY, JSON.stringify({ crs: $('cr
 for (const id of ['crs', 'obj', 'stamp']) $(id).addEventListener('change', () => { persist(); showGps(); });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
-renderList();
 startGps();
-window.GK ={ buildExif, replaceExif, tagVideo, project, onFix, handlePhoto, handleVideo, fileName };
+window.GK = { buildExif, replaceExif, tagVideo, project, onFix, handlePhoto, handleVideo, fileName };
 </script>
 </body>
 </html>
