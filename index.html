@@ -58,6 +58,22 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 details summary{cursor:pointer;font-weight:600}
 details ol{padding-left:20px;margin:8px 0 0;font-size:14px}
 details li{margin:4px 0}
+/* In-app camera: full screen preview, compass and mini map on top, shutter at the bottom */
+#cam{position:fixed;inset:0;z-index:50;background:#000;color:#fff;display:flex;flex-direction:column}
+#camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.camTop{position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 0}
+.hud{background:rgba(0,0,0,.55);border-radius:12px;padding:8px 12px;font:600 14px/1.35 var(--sans)}
+.hud .big{font:800 30px/1.1 var(--sans);font-variant-numeric:tabular-nums}
+#camMap{width:132px;height:132px;border-radius:50%;background:rgba(0,0,0,.55);flex:none}
+.camBottom{position:absolute;left:0;right:0;bottom:0;padding:16px 16px calc(22px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+#shutter{width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.35)}
+#shutter:active{background:#fff}
+#shutter:disabled{opacity:.4}
+.camBtn{justify-self:start;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:600}
+.camBtn.r{justify-self:end}
+#camMsg{position:absolute;left:12px;right:12px;bottom:calc(120px + env(safe-area-inset-bottom,0px));text-align:center}
+#camMsg span{background:rgba(0,0,0,.65);border-radius:10px;padding:8px 12px;display:inline-block}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -87,6 +103,12 @@ details li{margin:4px 0}
       <input type="text" id="obj" placeholder="мыс. Тұрар_Рысқұлов_12" autocomplete="off">
     </div>
     <label class="chk"><input type="checkbox" id="stamp" checked> Фотоға координат пен уақытты жазу</label>
+    <label class="chk"><input type="checkbox" id="mapStamp" checked> Фото бұрышына карта мен түсіру бағытын салу</label>
+    <label class="chk"><input type="checkbox" id="sysCam"> Телефонның өз камерасын қолдану (компас пен бағыт жазылмайды)</label>
+    <div class="row">
+      <label for="decl" style="margin:0;flex:1">Магниттік ауытқу, ° (Шымкент ≈ 6)</label>
+      <input type="text" id="decl" value="6" inputmode="decimal" style="width:80px">
+    </div>
   </section>
 
   <div class="shoot">
@@ -97,6 +119,24 @@ details li{margin:4px 0}
   <input type="file" id="inVideo" accept="video/*" capture="environment" hidden>
 
   <div id="msg" hidden></div>
+
+  <div id="cam" hidden>
+    <video id="camVideo" playsinline muted autoplay></video>
+    <div id="flash"></div>
+    <div class="camTop">
+      <div class="hud" aria-live="polite">
+        <div class="big" id="camDir">—</div>
+        <div id="camGps">GPS…</div>
+      </div>
+      <canvas id="camMap" width="264" height="264" aria-label="Карта және түсіру бағыты"></canvas>
+    </div>
+    <div id="camMsg" hidden><span></span></div>
+    <div class="camBottom">
+      <button class="camBtn" id="camClose">✕ Жабу</button>
+      <button id="shutter" aria-label="Түсіру"></button>
+      <button class="camBtn r" id="camSys">Жүйелік камера</button>
+    </div>
+  </div>
 
   <section class="card" id="listCard" hidden>
     <div class="row" style="justify-content:space-between;margin-bottom:10px"><b>Түсірілімдер</b><span class="meta" id="count"></span></div>
@@ -113,7 +153,8 @@ details li{margin:4px 0}
       <ol>
         <li>Chrome мәзірінен <b>«Басты экранға қосу» / «Установить приложение»</b> — ULDAR GeoFoto иконкасы пайда болады, интернетсіз де ашылады.</li>
         <li>Алғаш ашқанда <b>орынға (геолокация)</b> рұқсат беріңіз. Жоғарыдағы белгі жасыл (±5 м-ден жақсы) болғанда түсіріңіз.</li>
-        <li>Фото не Видео басылғанда телефон камерасы ашылады. Түсіріп, «OK» басыңыз — файл координатпен <b>Downloads (Жүктеулер)</b> папкасына сақталады.</li>
+        <li><b>Фото</b> басылғанда қосымшаның ішкі камерасы ашылады: жоғарыда түсіру бағыты (азимут, шын солтүстіктен) және карта. Ақ дөңгелекті басыңыз — файл координатпен және бағытпен <b>Downloads (Жүктеулер)</b> папкасына сақталады. Видео телефонның өз камерасымен түсіріледі.</li>
+        <li>Компас дұрыс көрсетпесе, телефонды ауада «8» санын сызып бірнеше рет айналдырыңыз (калибрлеу). Темір, машина, электр сымдарының жанында компас қателеседі.</li>
         <li>Координат үш жерге жазылады: фотоның EXIF-іне / видеоның метадерегіне, файл атына (<code>_N42.341700_E69.590100</code>) және (қосулы болса) суреттің өзіне.</li>
         <li>Әр түсірілімнің жанындағы <b>Google / Yandex / 2GIS</b> сол нүктені картада ашады. «Барлығы Yandex картада» — барлық нүкте нөмірімен (нөмір → тізімдегі уақыт).</li>
         <li>Компьютерге USB кабельмен немесе Telegram-да <b>«Файл ретінде»</b> жіберіңіз, сосын AutoCAD-та <b>GEOFOTO</b> командасы (Mgeo) немесе GeoFoto.html.</li>
@@ -197,7 +238,7 @@ function readExifBasic(u) {
   return out;
 }
 // Little-endian TIFF with IFD0, Exif IFD and GPS IFD
-function buildExif({ lat, lon, alt, acc, when, make, model, orientation }) {
+function buildExif({ lat, lon, alt, acc, dir, when, make, model, orientation }) {
   const A = 2, S = 3, L = 4, R = 5, B = 1;
   const rat = x => { const d = 1e6; return [Math.round(x * d), d]; };
   const dms = x => { x = Math.abs(x); const d = Math.floor(x), m = Math.floor((x - d) * 60), s = (x - d - m / 60) * 3600; return [[d, 1], [m, 1], [Math.round(s * 1e5), 1e5]]; };
@@ -211,6 +252,7 @@ function buildExif({ lat, lon, alt, acc, when, make, model, orientation }) {
     [0x001D, A, `${when.getUTCFullYear()}:${pad(when.getUTCMonth() + 1)}:${pad(when.getUTCDate())}`]];
   if (alt !== null && alt !== undefined && isFinite(alt)) gps.push([0x0005, B, [alt < 0 ? 1 : 0]], [0x0006, R, [rat(Math.abs(alt))]]);
   if (acc && isFinite(acc)) gps.push([0x001F, R, [rat(acc)]]);
+  if (dir !== undefined && dir !== null && isFinite(dir)) gps.push([0x0010, A, 'T'], [0x0011, R, [[Math.round(dir * 100), 100]]]);   // shooting direction, true north
   const ifds = [ifd0, exif, gps].map(e => e.sort((a, b) => a[0] - b[0]));
   const enc = (type, val) => {
     if (type === A) { const s = String(val).replace(/[^\x20-\x7E]/g, '?'); const u = new Uint8Array(s.length + 1); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return [u, u.length]; }
@@ -412,13 +454,169 @@ async function freshFix(returnT, waitMs = 12000) {
 }
 function staleNote(fix) { return fix && fix.stale ? `Назар аударыңыз: GPS жаңармады, координат ${fix.stale} с бұрынғы — қате болуы мүмкін` : ''; }
 
+// ===== Compass =====
+// Direction the BACK camera looks (device -Z axis), from the absolute orientation sensor.
+// W3C frame: R = Rz(alpha)·Rx(beta)·Ry(gamma), earth X = east, Y = north, alpha counter-clockwise.
+let headMag = null, headT = 0, roll = 0, hs = 0, hc = 1;
+function onOrient(e) {
+  let h;
+  if (typeof e.webkitCompassHeading === 'number') h = e.webkitCompassHeading;           // iPhone
+  else if (e.alpha !== null && (e.absolute || e.type === 'deviceorientationabsolute')) {  // Android
+    const a = e.alpha / RHO, b = e.beta / RHO, g = e.gamma / RHO;
+    const E = -Math.cos(a) * Math.sin(g) - Math.sin(a) * Math.sin(b) * Math.cos(g);
+    const N = -Math.sin(a) * Math.sin(g) + Math.cos(a) * Math.sin(b) * Math.cos(g);
+    h = Math.hypot(E, N) > 0.35 ? Math.atan2(E, N) * RHO : 360 - e.alpha;               // phone flat: use its top edge
+  } else return;
+  if (e.beta !== null && e.gamma !== null) {   // which side of the phone is up (for landscape shots)
+    const b = e.beta / RHO, g = e.gamma / RHO, ux = -Math.cos(b) * Math.sin(g), uy = Math.sin(b);
+    if (Math.hypot(ux, uy) > 0.5) roll = Math.atan2(ux, uy) * RHO;
+  }
+  const s = Math.sin(h / RHO), c = Math.cos(h / RHO);
+  if (Date.now() - headT > 1000) { hs = s; hc = c; } else { hs = hs * 0.75 + s * 0.25; hc = hc * 0.75 + c * 0.25; }
+  headMag = (Math.atan2(hs, hc) * RHO + 360) % 360; headT = Date.now();
+}
+window.addEventListener('deviceorientationabsolute', onOrient);
+window.addEventListener('deviceorientation', onOrient);
+const declination = () => { const v = parseFloat(String($('decl').value).replace(',', '.')); return isFinite(v) ? v : 0; };
+// true azimuth (from geographic north), or null when there is no compass
+function trueDir() { return headMag === null || Date.now() - headT > 3000 ? null : (headMag + declination() + 360) % 360; }
+const dirName = h => ['С', 'СШ', 'Ш', 'ОШ', 'О', 'ОБ', 'Б', 'СБ'][Math.round(h / 45) % 8];
+const dirText = h => `${Math.round(h) % 360}° ${dirName(h)}`;
+
+// ===== Mini map (Esri World Imagery, the same kind of picture as Google Earth) =====
+const TILE_Z = 17, tileCache = new Map();   // z18 in Shymkent is often "Map data not yet available"
+function worldPx(lat, lon, z) { const n = 2 ** z * 256, la = lat / RHO; return [(lon + 180) / 360 * n, (1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2 * n]; }
+function getTile(z, x, y) {
+  const k = `${z}/${y}/${x}`;
+  if (!tileCache.has(k)) {
+    tileCache.set(k, fetch(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${k}`)
+      .then(r => (r.ok ? r.blob() : Promise.reject())).then(b => createImageBitmap(b))
+      .catch(() => { setTimeout(() => tileCache.delete(k), 30000); return null; }));   // offline: retry later
+    if (tileCache.size > 80) tileCache.delete(tileCache.keys().next().value);
+  }
+  return tileCache.get(k);
+}
+// North-up round map around the point, yellow view cone toward dir, red dot = camera. Offline: dark compass.
+async function drawInset(g, cx, cy, r, lat, lon, dir, waitMs) {
+  const [px, py] = worldPx(lat, lon, TILE_Z), half = 80, sc = r / half, tiles = [];   // 80 px at z17 ≈ 70 m radius
+  for (let tx = Math.floor((px - half) / 256); tx <= Math.floor((px + half) / 256); tx++)
+    for (let ty = Math.floor((py - half) / 256); ty <= Math.floor((py + half) / 256); ty++) tiles.push([tx, ty]);
+  const late = new Promise(res => setTimeout(res, waitMs, null));
+  const imgs = await Promise.all(tiles.map(([tx, ty]) => Promise.race([getTile(TILE_Z, tx, ty), late])));
+  const lw = Math.max(2, r / 35);
+  g.save();
+  g.beginPath(); g.arc(cx, cy, r, 0, 2 * Math.PI); g.fillStyle = '#26332c'; g.fill(); g.clip();
+  let any = false;
+  imgs.forEach((im, i) => { if (im) { any = true; g.drawImage(im, cx + (tiles[i][0] * 256 - px) * sc, cy + (tiles[i][1] * 256 - py) * sc, 256 * sc + 1, 256 * sc + 1); } });
+  if (dir !== null && dir !== undefined) {
+    const a = (dir - 90) / RHO, fov = 55 / RHO;
+    g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, a - fov / 2, a + fov / 2); g.closePath();
+    g.fillStyle = 'rgba(255,214,0,.33)'; g.fill(); g.strokeStyle = '#ffd600'; g.lineWidth = lw; g.stroke();
+    g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); g.strokeStyle = '#ff3b30'; g.lineWidth = lw * 1.6; g.stroke();
+  }
+  g.beginPath(); g.arc(cx, cy, Math.max(4, r / 14), 0, 2 * Math.PI); g.fillStyle = '#ff3b30'; g.fill(); g.strokeStyle = '#fff'; g.lineWidth = lw; g.stroke();
+  // 20 m scale bar
+  const mpp = 156543.03392 * Math.cos(lat / RHO) / 2 ** TILE_Z, bar = 20 / mpp * sc, fs = Math.max(9, r / 7);
+  g.font = `700 ${fs}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(cx - bar / 2 - fs * 0.4, cy + r * 0.62 - fs * 1.1, bar + fs * 0.8, fs * 1.6);
+  g.fillStyle = '#fff'; g.fillRect(cx - bar / 2, cy + r * 0.62 + fs * 0.15, bar, Math.max(2, lw * 0.8));
+  g.fillText(any ? '20 м' : 'карта жоқ', cx, cy + r * 0.62);
+  if (any) { g.font = `600 ${fs * 0.6}px system-ui, sans-serif`; g.fillText('© Esri', cx, cy + r * 0.88); }
+  g.restore();
+  g.beginPath(); g.arc(cx, cy, r, 0, 2 * Math.PI); g.strokeStyle = '#fff'; g.lineWidth = lw; g.stroke();
+  const nf = Math.max(11, r / 4.2);   // "С" = north (Солтүстік / Север), the map is always north-up
+  g.beginPath(); g.arc(cx, cy - r, nf * 0.72, 0, 2 * Math.PI); g.fillStyle = '#c62828'; g.fill(); g.strokeStyle = '#fff'; g.stroke();
+  g.font = `800 ${nf}px system-ui, sans-serif`; g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('С', cx, cy - r + nf * 0.04);
+  g.textAlign = 'start'; g.textBaseline = 'alphabetic';
+  return any;
+}
+
+// ===== In-app camera (keeps GPS and compass running while you aim) =====
+let camStream = null, camTimer = null, camBusy = false, hudBusy = false, lastSaved = '';
+function camMsg(t) { $('camMsg').hidden = !t; $('camMsg').firstElementChild.textContent = t || ''; }
+async function openCam() {
+  if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) { try { await DeviceOrientationEvent.requestPermission(); } catch (e) {} }
+  $('cam').hidden = false; camMsg('Камера ашылуда…'); rewatch();
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 4096 }, height: { ideal: 4096 } } });
+  } catch (e) {
+    camMsg(`Камера ашылмады (${e.name}). Камераға рұқсат беріңіз, немесе «Жүйелік камера» басыңыз.`); return;
+  }
+  const v = $('camVideo'); v.srcObject = camStream; try { await v.play(); } catch (e) {}
+  camMsg(''); camHud(); camTimer = setInterval(camHud, 300);
+}
+function closeCam() {
+  clearInterval(camTimer); camTimer = null;
+  if (camStream) camStream.getTracks().forEach(t => t.stop());
+  camStream = null; $('camVideo').srcObject = null; $('cam').hidden = true;
+  if (lastSaved) say(lastSaved, 'ok');
+}
+async function camHud() {
+  const d = trueDir();
+  $('camDir').textContent = d === null ? 'Компас жоқ' : dirText(d);
+  $('camGps').textContent = gpsError || (last ? `±${last.acc < 10 ? last.acc.toFixed(1) : Math.round(last.acc)} м${Date.now() - last.t > 10000 ? ' (ескі)' : ''}` : 'GPS іздеуде…');
+  if (hudBusy || !last) return;
+  hudBusy = true;
+  try {
+    const off = document.createElement('canvas'); off.width = off.height = 264;
+    await drawInset(off.getContext('2d'), 132, 138, 112, last.lat, last.lon, d, 250);
+    const g = $('camMap').getContext('2d'); g.clearRect(0, 0, 264, 264); g.drawImage(off, 0, 0);
+  } catch (e) {}
+  hudBusy = false;
+}
+// Draw src rotated clockwise by deg (0/90/180/270) onto a new canvas
+function rotCanvas(src, deg) {
+  const w = src.width, h = src.height, c = document.createElement('canvas'), side = deg % 180 !== 0;
+  c.width = side ? h : w; c.height = side ? w : h;
+  const g = c.getContext('2d'); g.translate(c.width / 2, c.height / 2); g.rotate(deg / RHO); g.drawImage(src, -w / 2, -h / 2);
+  return c;
+}
+// Some phones give takePhoto() in sensor orientation: compare with the preview frame and pick the matching turn
+function matchTurn(photo, frame) {
+  if ((photo.width > photo.height) === (frame.width > frame.height)) return 0;
+  const sig = (src, deg) => { const c = document.createElement('canvas'); c.width = c.height = 24; const g = c.getContext('2d');
+    g.translate(12, 12); g.rotate(deg / RHO); g.drawImage(src, -12, -12, 24, 24);
+    const d = g.getImageData(0, 0, 24, 24).data, o = []; for (let i = 0; i < d.length; i += 4) o.push(d[i] + d[i + 1] + d[i + 2]); return o; };
+  const ref = sig(frame, 0), diff = deg => sig(photo, deg).reduce((s, v, i) => s + Math.abs(v - ref[i]), 0);
+  return diff(90) <= diff(270) ? 90 : 270;
+}
+async function shoot() {
+  if (camBusy || !camStream) return;
+  camBusy = true; $('shutter').disabled = true;
+  const t = Date.now(), dir = trueDir(), screenAngle = (screen.orientation && screen.orientation.angle) || 0;
+  const up = ((Math.round((roll - screenAngle) / 90) * 90) % 360 + 360) % 360;   // which side of the picture is up
+  $('flash').style.opacity = 1; setTimeout(() => { $('flash').style.opacity = 0; }, 120);
+  try {
+    const v = $('camVideo'), frame = await createImageBitmap(v);
+    let photo = null;
+    if ('ImageCapture' in window) {
+      try { photo = await createImageBitmap(await new ImageCapture(camStream.getVideoTracks()[0]).takePhoto(), { imageOrientation: 'from-image' }); } catch (e) { photo = null; }
+    }
+    const src = photo || frame, turn = ((photo ? matchTurn(photo, frame) : 0) + 360 - up) % 360;
+    const canvas = rotCanvas(src, turn);
+    if (photo) photo.close(); frame.close();
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.95));
+    canvas.width = canvas.height = 0;
+    camMsg('Координат жазылуда…');
+    let fix = last && t - last.t < 5000 ? last : await freshFix(t - 4000, 6000);
+    if (fix) fix = { ...fix, dir: dir === null ? undefined : dir };
+    const it = await processShot(handlePhoto, new File([blob], 'cam.jpg', { type: 'image/jpeg', lastModified: t }), new Date(t), fix);
+    lastSaved = `Сақталды: ${it.name}`;
+    camMsg(it.note || `№${shots.length} сақталды · ${it.time}${it.dir !== undefined ? ' · ' + dirText(it.dir) : ''}`);
+    setTimeout(() => { if (!camBusy) camMsg(''); }, 2500);
+  } catch (e) { camMsg('Қате: ' + e.message); }
+  camBusy = false; $('shutter').disabled = false;
+}
+
 // ===== Capture =====
 function say(text, cls) { const m = $('msg'); m.hidden = !text; m.textContent = text || ''; m.className = cls || ''; }
 const stampName = d => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 function objPart() { const s = $('obj').value.trim().replace(/[\\/:*?"<>|#%]+/g, '').replace(/\s+/g, '_'); return s ? s + '_' : ''; }
 function fileName(kind, when, fix, ext) {
   const ll = fix ? `_${fix.lat < 0 ? 'S' : 'N'}${Math.abs(fix.lat).toFixed(6)}_${fix.lon < 0 ? 'W' : 'E'}${Math.abs(fix.lon).toFixed(6)}` : '_NOGPS';
-  return `${objPart()}${kind}_${stampName(when)}${ll}.${ext}`;
+  const az = fix && fix.dir !== undefined ? `_A${Math.round(fix.dir) % 360}` : '';   // _A125 = azimuth 125°
+  return `${objPart()}${kind}_${stampName(when)}${ll}${az}.${ext}`;
 }
 async function stampPhoto(file, fix, when) {
   const bm = await createImageBitmap(file, { imageOrientation: 'from-image' });
@@ -426,11 +624,19 @@ async function stampPhoto(file, fix, when) {
   const g = c.getContext('2d'); g.drawImage(bm, 0, 0); bm.close();
   const k = $('crs').value, [E, N] = project(k, fix.lat, fix.lon), obj = $('obj').value.trim();
   const lines = [obj, `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())} ${pad(when.getHours())}:${pad(when.getMinutes())}:${pad(when.getSeconds())}   ±${fix.acc.toFixed(1)} м`,
-    `WGS-84: ${fix.lat.toFixed(7)}, ${fix.lon.toFixed(7)}${fix.alt !== null && fix.alt !== undefined ? `   H ${fix.alt.toFixed(1)} м` : ''}`, `${k}: X ${E.toFixed(3)}   Y ${N.toFixed(3)}`].filter(Boolean);
+    `WGS-84: ${fix.lat.toFixed(7)}, ${fix.lon.toFixed(7)}${fix.alt !== null && fix.alt !== undefined ? `   H ${fix.alt.toFixed(1)} м` : ''}`, `${k}: X ${E.toFixed(3)}   Y ${N.toFixed(3)}`,
+    fix.dir !== undefined ? `Бағыт: ${dirText(fix.dir)} (азимут)` : ''].filter(Boolean);
   const fs = Math.max(14, Math.round(Math.min(c.width, c.height) / 30)), lh = fs * 1.35, padd = fs * 0.7, bh = lines.length * lh + padd * 2;
-  g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(0, c.height - bh, c.width, bh);
-  g.font = `600 ${fs}px system-ui, sans-serif`; g.fillStyle = '#fff'; g.textBaseline = 'top';
-  lines.forEach((t, i) => g.fillText(t, padd, c.height - bh + padd + i * lh));
+  if ($('stamp').checked) {
+    g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(0, c.height - bh, c.width, bh);
+    g.font = `600 ${fs}px system-ui, sans-serif`; g.fillStyle = '#fff'; g.textBaseline = 'top';
+    lines.forEach((t, i) => g.fillText(t, padd, c.height - bh + padd + i * lh));
+    g.textBaseline = 'alphabetic';
+  }
+  if ($('mapStamp').checked) {   // round map with the view direction in the top-right corner
+    const r = Math.round(Math.min(c.width, c.height) * 0.17), m = Math.round(r * 0.35);
+    await drawInset(g, c.width - r - m, r + m, r, fix.lat, fix.lon, fix.dir, 2500);
+  }
   const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
   c.width = c.height = 0;
   return new Uint8Array(await blob.arrayBuffer());
@@ -441,7 +647,7 @@ async function handlePhoto(file, when, fix) {
   else {
     const old = readExifBasic(bytes);
     let orientation = old.orientation;
-    if ($('stamp').checked) {
+    if ($('stamp').checked || $('mapStamp').checked) {
       try { bytes = await stampPhoto(file, fix, when); orientation = 1; } catch (e) { note = 'Суретке жазу мүмкін болмады (жады аз), координат EXIF-те'; }
     }
     try { out = replaceExif(bytes, buildExif({ ...fix, when, make: old.make, model: old.model, orientation })); }
@@ -499,7 +705,7 @@ function renderList() {
     const th = document.createElement(it.thumb ? 'img' : 'div'); th.className = 'ph'; if (it.thumb) th.src = it.thumb;
     const info = document.createElement('div');
     const tm = document.createElement('div'); tm.className = 'tm';
-    tm.textContent = `№${idx + 1} · ${it.time || ''} · ${it.kind === 'video' ? 'видео' : 'фото'}`;
+    tm.textContent = `№${idx + 1} · ${it.time || ''} · ${it.kind === 'video' ? 'видео' : 'фото'}${it.dir !== undefined ? ' · ' + dirText(it.dir) : ''}`;
     const nm = document.createElement('div'); nm.className = 'nm meta'; nm.textContent = it.name;
     info.append(tm, nm);
     if (it.note) { const n = document.createElement('div'); n.className = 'meta'; n.style.color = 'var(--warn)'; n.textContent = it.note; info.appendChild(n); }
@@ -529,9 +735,25 @@ async function thumbOf(it) {
   } catch (e) { return null; }
 }
 
+// shared by the in-app camera and the phone's own camera
+async function processShot(fn, file, now, fix) {
+  const it = await fn(file, now, fix);
+  it.thumb = await thumbOf(it);
+  it.time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  it.date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  if (it.fix) { it.lat = it.fix.lat; it.lon = it.fix.lon; if (it.fix.dir !== undefined) it.dir = it.fix.dir; }
+  delete it.fix;
+  shots.push(it); persistShots(); renderList();
+  save(it);
+  return it;
+}
 let pressT = 0;
-$('bPhoto').onclick = () => { pressT = Date.now(); $('inPhoto').click(); };
+function sysPhoto() { pressT = Date.now(); $('inPhoto').click(); }
+$('bPhoto').onclick = () => { if ($('sysCam').checked || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) sysPhoto(); else openCam(); };
 $('bVideo').onclick = () => { pressT = Date.now(); $('inVideo').click(); };
+$('shutter').onclick = shoot;
+$('camClose').onclick = closeCam;
+$('camSys').onclick = () => { closeCam(); sysPhoto(); };
 for (const [id, fn] of [['inPhoto', handlePhoto], ['inVideo', handleVideo]]) {
   $(id).onchange = async e => {
     const file = e.target.files[0], returnT = Date.now(); e.target.value = '';
@@ -542,14 +764,7 @@ for (const [id, fn] of [['inPhoto', handlePhoto], ['inVideo', handleVideo]]) {
     try {
       const fix = await freshFix(returnT);
       say('Координат жазылуда…');
-      const it = await fn(file, now, fix);
-      it.thumb = await thumbOf(it);
-      it.time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-      it.date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-      if (it.fix) { it.lat = it.fix.lat; it.lon = it.fix.lon; }
-      delete it.fix;
-      shots.push(it); persistShots(); renderList();
-      save(it);
+      const it = await processShot(fn, file, now, fix);
       say(it.note ? it.note : `Сақталды: ${it.name}`, it.note ? 'warn' : 'ok');
     } catch (err) { say('Қате: ' + err.message, 'err'); }
   };
@@ -563,9 +778,13 @@ $('bCopy').onclick = async () => {
 
 // ===== Settings =====
 const KEY = 'geokamera.v1';
-try { const s = JSON.parse(localStorage.getItem(KEY)) || {}; if (s.crs) $('crs').value = s.crs; if (s.obj) $('obj').value = s.obj; if (s.stamp === false) $('stamp').checked = false; } catch (e) {}
-function persist() { try { localStorage.setItem(KEY, JSON.stringify({ crs: $('crs').value, obj: $('obj').value, stamp: $('stamp').checked })); } catch (e) {} }
-for (const id of ['crs', 'obj', 'stamp']) $(id).addEventListener('change', () => { persist(); showGps(); });
+try {
+  const s = JSON.parse(localStorage.getItem(KEY)) || {};
+  if (s.crs) $('crs').value = s.crs; if (s.obj) $('obj').value = s.obj; if (s.stamp === false) $('stamp').checked = false;
+  if (s.mapStamp === false) $('mapStamp').checked = false; if (s.sysCam) $('sysCam').checked = true; if (s.decl !== undefined) $('decl').value = s.decl;
+} catch (e) {}
+function persist() { try { localStorage.setItem(KEY, JSON.stringify({ crs: $('crs').value, obj: $('obj').value, stamp: $('stamp').checked, mapStamp: $('mapStamp').checked, sysCam: $('sysCam').checked, decl: $('decl').value })); } catch (e) {} }
+for (const id of ['crs', 'obj', 'stamp', 'mapStamp', 'sysCam', 'decl']) $(id).addEventListener('change', () => { persist(); showGps(); });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 renderList();
