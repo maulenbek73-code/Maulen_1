@@ -1,5 +1,5 @@
 // Offline cache: the app opens in the field without internet. Bump VERSION after changing files.
-const VERSION = 'uldar-geofoto-4';
+const VERSION = 'uldar-geofoto-5';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

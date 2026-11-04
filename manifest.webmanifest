@@ -2,7 +2,7 @@
   "id": "./",
   "name": "ULDAR GeoFoto",
   "short_name": "ULDAR GeoFoto",
-  "description": "Фото мен видеоға GPS координатын жазатын камера (Shymkent_USL, SK42, UTM42)",
+  "description": "Фото мен видеоға GPS координатын жазатын камера (Shymkent_USL, SK42, UTM42, South SurVx жүйелері)",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
