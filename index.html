@@ -23,7 +23,7 @@ header b{font-size:17px;letter-spacing:.02em}
 .chip{font:600 12px/1 var(--sans);padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.12);display:flex;gap:6px;align-items:center;white-space:nowrap}
 .dot{width:9px;height:9px;border-radius:50%;background:#9ca3af}
 .dot.ok{background:#4ade80}.dot.warn{background:#fbbf24}.dot.err{background:#f87171}
-main{padding:14px max(16px,env(safe-area-inset-right,0px)) 32px max(16px,env(safe-area-inset-left,0px));max-width:560px;margin:0 auto;display:grid;gap:14px}
+main{padding:14px max(16px,env(safe-area-inset-right,0px)) 32px max(16px,env(safe-area-inset-left,0px));max-width:560px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
 .coords{display:grid;gap:8px}
 .ll{font:600 21px/1.25 var(--mono);font-variant-numeric:tabular-nums;word-break:break-all}
@@ -46,7 +46,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .btn:disabled{opacity:.5}
 .chk{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--text);text-transform:none;letter-spacing:0;margin:0}
 .chk input{width:20px;height:20px;margin:0}
-#msg{font-size:14px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card)}
+#msg{overflow-wrap:anywhere;font-size:14px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card)}
 #msg.err{border-color:var(--err);color:var(--err)}#msg.ok{border-color:var(--ok);color:var(--ok)}#msg.warn{border-color:var(--warn);color:var(--warn)}
 .list{display:grid;gap:10px}
 .item{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center}
@@ -83,6 +83,21 @@ details li{margin:4px 0}
 #shutter.vid{background:rgba(229,57,53,.9)}
 #shutter.rec{background:#e53935;border-radius:22px}
 #camRec{color:#ff5252;font-weight:800}
+.item .pick{width:22px;height:22px;margin:0}
+.item.sel{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
+.wide{width:100%;padding:12px;font-weight:700}
+/* Map picker: put a photo on the map, or aim its direction (phones without a compass) */
+#pk{position:fixed;inset:0;z-index:60;background:#111;color:#fff;touch-action:none}
+#pkMap{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+.pkTop{position:absolute;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top,0px))}
+.pkTop .hud{font:600 14px/1.4 var(--sans)}
+.pkTop .hud b{font:800 18px/1.3 var(--sans)}
+.pkZoom{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:grid;gap:8px}
+.pkZoom button{width:46px;height:46px;border-radius:10px;border:0;background:rgba(0,0,0,.6);color:#fff;font:700 22px var(--sans)}
+.pkBottom{position:absolute;left:0;right:0;bottom:0;padding:10px 10px calc(14px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.6);display:grid;gap:8px}
+.pkBottom input{font:15px var(--sans);flex:1;min-width:0;padding:10px;border-radius:8px;border:0;color:#111;background:#fff}
+.pkBottom .btn{background:rgba(255,255,255,.15);color:#fff;border-color:transparent;padding:10px 14px}
+.pkBottom .btn.primary{background:#ffd600;color:#111}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -124,8 +139,10 @@ details li{margin:4px 0}
     <button id="bPhoto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Фото</button>
     <button id="bVideo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="12" height="12" rx="1"/><path d="M15 10l6-3v10l-6-3z"/></svg>Видео</button>
   </div>
+  <button class="btn wide" id="bAdd" title="Телефондағы фото/видеоны тізімге қосу: EXIF-тегі координат оқылады, жоқ болса картадан қоясыз">Телефоннан фото/видео қосу (координат қою)</button>
   <input type="file" id="inPhoto" accept="image/*" capture="environment" hidden>
   <input type="file" id="inVideo" accept="video/*" capture="environment" hidden>
+  <input type="file" id="inAdd" accept="image/*,video/*" multiple hidden>
 
   <div id="msg" hidden></div>
 
@@ -149,6 +166,20 @@ details li{margin:4px 0}
     </div>
   </div>
 
+  <div id="pk" hidden>
+    <canvas id="pkMap" aria-label="Карта: жылжыту — саусақпен, масштаб — оң жақтағы батырмалар"></canvas>
+    <div class="pkTop"><div class="hud" id="pkInfo" aria-live="polite"></div></div>
+    <div class="pkZoom">
+      <button id="pkPlus" aria-label="Жақындату">+</button>
+      <button id="pkMinus" aria-label="Алыстату">−</button>
+      <button id="pkHere" aria-label="Менің орным (GPS)">◎</button>
+    </div>
+    <div class="pkBottom">
+      <div class="row"><input type="text" id="pkTxt" autocomplete="off"><button class="btn" id="pkGo">Енгізу</button></div>
+      <div class="row" style="justify-content:space-between"><button class="btn" id="pkCancel">Бас тарту</button><button class="btn primary" id="pkOk">Сақтау</button></div>
+    </div>
+  </div>
+
   <section class="card" id="listCard" hidden>
     <div class="row" style="justify-content:space-between;margin-bottom:10px"><b>Түсірілімдер</b><span class="meta" id="count"></span></div>
     <div class="row" style="margin-bottom:12px">
@@ -156,8 +187,13 @@ details li{margin:4px 0}
       <button class="btn" id="bClear">Тізімді тазалау</button>
     </div>
     <div class="row" style="margin-bottom:12px">
-      <select id="zipDay" aria-label="Қай күннің түсірілімдері" style="flex:1;min-width:0"></select>
+      <select id="zipDay" aria-label="ZIP-ке қай файлдар кіреді: күн, нысан немесе өзіңіз белгілегендер" style="flex:1;min-width:0"></select>
       <button class="btn primary" id="bZip">Компьютерге (ZIP)</button>
+    </div>
+    <div class="row" id="pickRow" style="margin-bottom:12px" hidden>
+      <button class="btn" id="bPickAll">Барлығын белгілеу</button>
+      <button class="btn" id="bPickNone">Белгіні алу</button>
+      <span class="meta" id="pickCount"></span>
     </div>
     <div class="list" id="list"></div>
   </section>
@@ -171,7 +207,9 @@ details li{margin:4px 0}
         <li><b>Фото</b> басылғанда қосымшаның ішкі камерасы ашылады: жоғарыда түсіру бағыты (азимут, шын солтүстіктен) және карта. Ақ дөңгелекті басыңыз — файл координатпен және бағытпен <b>Downloads (Жүктеулер)</b> папкасына сақталады.</li>
         <li><b>Видео</b> да қосымшаның ішінде жазылады: кадрдың өзінде уақыт, координат, бағыт және карта нақты уақытта өзгеріп тұрады. Қызыл дөңгелек — бастау, тағы басу — тоқтату. Видео 10 минуттан кейін өзі тоқтайды.</li>
         <li><b>Координат жүйесі</b>: MAPLINK (USL, SK42, UTM42) және South SurVx контроллерінің 216 жүйесі (қалалар МСК, СК-42, СК-63, KazGeodeziay, QazTRF-23, UTM). Контроллердегі өз жүйеңіз болса — <b>«+ SP»</b> басып .SP файлын таңдаңыз.</li>
-        <li><b>Компьютерге жіберу</b>: «Компьютерге (ZIP)» күннің барлық фото/видеосын бір ZIP файлға жинайды (Downloads). Telegram → 📎 → <b>Файл</b> → Downloads → ZIP → «Избранное». Компьютерде AutoCAD → <b>GEOFOTO</b> → осы ZIP-ті таңдаңыз: ашады, сызбаға қояды, Google Earth файлын жасайды.</li>
+        <li><b>Компьютерге жіберу</b>: ZIP-ке не кіретінін таңдаңыз — <b>күн</b>, <b>нысан</b> (файл атындағы нысан аты) немесе <b>«Өзім белгілеймін»</b> (тізімде галочка қоясыз). «Компьютерге (ZIP)» оларды бір ZIP файлға жинайды (Downloads). Telegram → 📎 → <b>Файл</b> → Downloads → ZIP → «Избранное». Компьютерде AutoCAD → <b>GEOFOTO</b> → осы ZIP-ті таңдаңыз: ашады, сызбаға қояды, Google Earth файлын жасайды.</li>
+        <li><b>Компасы жоқ телефон</b>: түсіріп болған соң тізімдегі <b>«Бағыт»</b> батырмасын басыңыз — карта ашылады, фото қай жаққа қарап түсірілгенін картадан нұқып көрсетесіз (немесе азимутты санмен жазасыз). Бағыт EXIF-ке, файл атына (<code>_A125</code>), KML-ге (сары сызық) және AutoCAD-тағы жебеге түседі.</li>
+        <li><b>Басқа фотоларға координат</b>: «Телефоннан фото/видео қосу» — галереядан бірнеше файл таңдаңыз. EXIF-інде координаты бар фото бірден тізімге түседі; жоқтарына <b>«Орны»</b> басып картадан (немесе координатты жазып) орнын қоясыз — координат EXIF-ке жазылады, файл аты GEOFOTO оқитын түрге келеді. Сосын «Сақтау» немесе ZIP.</li>
         <li>Компас дұрыс көрсетпесе, телефонды ауада «8» санын сызып бірнеше рет айналдырыңыз (калибрлеу). Темір, машина, электр сымдарының жанында компас қателеседі.</li>
         <li>Координат үш жерге жазылады: фотоның EXIF-іне / видеоның метадерегіне, файл атына (<code>_N42.341700_E69.590100</code>) және (қосулы болса) суреттің өзіне.</li>
         <li>Әр түсірілімнің жанындағы <b>Google / Yandex / 2GIS</b> сол нүктені картада ашады. «Барлығы Yandex картада» — барлық нүкте нөмірімен (нөмір → тізімдегі уақыт).</li>
@@ -517,14 +555,38 @@ function readExifBasic(u) {
       const len = v.getUint16(off + 2);
       if (m === 0xFFE1 && v.getUint32(off + 4) === 0x45786966) {
         const t = off + 10, le = v.getUint16(t) === 0x4949, u16 = o => v.getUint16(t + o, le), u32 = o => v.getUint32(t + o, le);
-        const i0 = u32(4), n = u16(i0);
-        for (let i = 0; i < n; i++) {
-          const e = i0 + 2 + i * 12, tag = u16(e), cnt = u32(e + 4), at = cnt > 4 ? u32(e + 8) : e + 8;
+        const ifd = (i0, fn) => { const n = u16(i0); for (let i = 0; i < n; i++) {
+          const e = i0 + 2 + i * 12, tag = u16(e), type = u16(e + 2), cnt = u32(e + 4), sz = [0, 1, 1, 2, 4, 8][type] || 1, at = cnt * sz > 4 ? u32(e + 8) : e + 8;
           const ascii = () => { let s = ''; for (let k = 0; k < cnt; k++) { const c = v.getUint8(t + at + k); if (!c) break; s += String.fromCharCode(c); } return s; };
-          if (tag === 0x0112) out.orientation = u16(e + 8);
-          if (tag === 0x010F) out.make = ascii();
-          if (tag === 0x0110) out.model = ascii();
+          const rat = k => u32(at + k * 8) / (u32(at + k * 8 + 4) || 1);
+          fn(tag, { e, ascii, rat, u16 }); } };
+        let exifP = 0, gpsP = 0;
+        ifd(u32(4), (tag, x) => {
+          if (tag === 0x0112) out.orientation = x.u16(x.e + 8);
+          if (tag === 0x010F) out.make = x.ascii();
+          if (tag === 0x0110) out.model = x.ascii();
+          if (tag === 0x0132 && !out.dt) out.dt = x.ascii();
+          if (tag === 0x8769) exifP = u32(x.e + 8);
+          if (tag === 0x8825) gpsP = u32(x.e + 8);
+        });
+        if (exifP) ifd(exifP, (tag, x) => { if (tag === 0x9003) out.dt = x.ascii(); });
+        if (gpsP) {
+          const g = {};
+          ifd(gpsP, (tag, x) => {
+            if (tag === 1 || tag === 3) g[tag] = x.ascii();
+            if (tag === 2 || tag === 4) g[tag] = x.rat(0) + x.rat(1) / 60 + x.rat(2) / 3600;
+            if (tag === 5) g[5] = v.getUint8(t + x.e + 8);
+            if (tag === 6) g[6] = x.rat(0);
+            if (tag === 0x11) g[17] = x.rat(0);
+          });
+          if (isFinite(g[2]) && isFinite(g[4]) && (g[2] || g[4])) {
+            out.lat = g[1] === 'S' ? -g[2] : g[2]; out.lon = g[3] === 'W' ? -g[4] : g[4];
+            if (isFinite(g[6])) out.alt = g[5] === 1 ? -g[6] : g[6];
+            if (isFinite(g[17])) out.dir = g[17] % 360;
+          }
         }
+        const m = /^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/.exec(out.dt || '');
+        if (m) out.date = new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
         break;
       }
       off += 2 + len;
@@ -1021,7 +1083,7 @@ async function shoot() {
     if (fix) fix = { ...fix, dir: dir === null ? undefined : dir };
     const it = await processShot(handlePhoto, new File([blob], 'cam.jpg', { type: 'image/jpeg', lastModified: t }), new Date(t), fix);
     lastSaved = `Сақталды: ${it.name}`;
-    camMsg(it.note || `№${shots.length} сақталды · ${it.time}${it.dir !== undefined ? ' · ' + dirText(it.dir) : ''}`);
+    camMsg(it.note || `№${shots.length} сақталды · ${it.time}${it.dir !== undefined ? ' · ' + dirText(it.dir) : ' · компас жоқ: бағытты тізімнен «Бағыт» арқылы картадан қойыңыз'}`);
     setTimeout(() => { if (!camBusy) camMsg(''); }, 2500);
   } catch (e) { camMsg('Қате: ' + e.message); }
   camBusy = false; $('shutter').disabled = false;
@@ -1044,7 +1106,7 @@ function fileName(kind, when, fix, ext) {
 // text written on photos and video frames
 function stampLines(fix, when) {
   const k = $('crs').value, [E, N] = project(k, fix.lat, fix.lon), obj = $('obj').value.trim();
-  return [obj, `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())} ${pad(when.getHours())}:${pad(when.getMinutes())}:${pad(when.getSeconds())}   ±${fix.acc.toFixed(1)} м`,
+  return [obj, `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())} ${pad(when.getHours())}:${pad(when.getMinutes())}:${pad(when.getSeconds())}${fix.acc ? `   ±${fix.acc.toFixed(1)} м` : ''}`,
     `WGS-84: ${fix.lat.toFixed(7)}, ${fix.lon.toFixed(7)}${fix.alt !== null && fix.alt !== undefined ? `   H ${fix.alt.toFixed(1)} м` : ''}`,
     crsFits(k, fix.lon) ? `${crsName(k)}: X ${E.toFixed(3)}   Y ${N.toFixed(3)}` : '',
     fix.dir !== undefined && fix.dir !== null ? `Бағыт: ${dirText(fix.dir)} (азимут)` : ''].filter(Boolean);
@@ -1133,9 +1195,10 @@ async function share(item) {
 // The list (without the files) is kept on the phone, so map links work after the app restarts
 const SHOTS_KEY = 'geokamera.shots';
 let shots = [];
+const picked = new Set();   // files ticked for "Өзім белгілеймін"
 try { shots = JSON.parse(localStorage.getItem(SHOTS_KEY)) || []; } catch (e) {}
 function persistShots() {
-  const keep = shots.slice(-150).map(({ blob, ...m }) => m);
+  const keep = shots.slice(-MAX_SHOTS).map(({ blob, ...m }) => m);
   try { localStorage.setItem(SHOTS_KEY, JSON.stringify(keep)); } catch (e) {
     try { localStorage.setItem(SHOTS_KEY, JSON.stringify(keep.map(({ thumb, ...m }) => m))); } catch (e2) {}
   }
@@ -1152,10 +1215,21 @@ function renderList() {
   $('count').textContent = shots.length + ' файл';
   $('allYandex').href = yandexAll();
   fillZipDays();
-  const box = $('list'); box.textContent = '';
+  const box = $('list'), picking = $('zipDay').value === 'pick'; box.textContent = '';
+  $('pickRow').hidden = !picking;
+  for (const n of [...picked]) if (!shots.some(s => s.name === n)) picked.delete(n);
+  $('pickCount').textContent = `белгіленді: ${picked.size}`;
   shots.forEach((it, idx) => {
-    const row = document.createElement('div'); row.className = 'item';
+    const row = document.createElement('div'); row.className = 'item' + (picking && picked.has(it.name) ? ' sel' : '');
     const th = document.createElement(it.thumb ? 'img' : 'div'); th.className = 'ph'; if (it.thumb) th.src = it.thumb;
+    if (picking) {   // tap the thumbnail or the box to put the file in the ZIP
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'pick'; cb.checked = picked.has(it.name);
+      cb.setAttribute('aria-label', `№${idx + 1} ZIP-ке қосу`);
+      const flip = () => { if (picked.has(it.name)) picked.delete(it.name); else picked.add(it.name); renderList(); };
+      cb.onchange = flip; th.onclick = flip; th.style.cursor = 'pointer';
+      const wrap = document.createElement('div'); wrap.style.cssText = 'display:grid;gap:6px;justify-items:center'; wrap.append(th, cb);
+      row.appendChild(wrap);
+    } else row.appendChild(th);
     const info = document.createElement('div');
     const tm = document.createElement('div'); tm.className = 'tm';
     tm.textContent = `№${idx + 1} · ${it.time || ''} · ${it.kind === 'video' ? 'видео' : 'фото'}${it.dir !== undefined ? ' · ' + dirText(it.dir) : ''}`;
@@ -1165,11 +1239,13 @@ function renderList() {
     if (it.lat !== undefined) { const m = document.createElement('div'); m.className = 'maps'; m.style.marginTop = '6px'; mapLinks(m, it.lat, it.lon); info.appendChild(m); }
     if (it.blob || it.stored) {
       const r = document.createElement('div'); r.className = 'row';
-      const b1 = document.createElement('button'); b1.className = 'btn'; b1.textContent = 'Сақтау'; b1.onclick = () => save(it);
-      const b2 = document.createElement('button'); b2.className = 'btn'; b2.textContent = 'Бөлісу'; b2.onclick = () => share(it);
-      r.append(b1, b2); info.appendChild(r);
+      const btn = (t, fn, tip) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = t; b.onclick = fn; if (tip) b.title = tip; r.appendChild(b); };
+      btn('Сақтау', () => save(it)); btn('Бөлісу', () => share(it));
+      btn(it.lat === undefined ? 'Орнын қою' : 'Орны', () => editPlace(it), 'Орнын картадан немесе координатпен көрсету');
+      if (it.lat !== undefined) btn('Бағыт', () => editDir(it), 'Түсіру бағытын картадан көрсету (компасы жоқ телефонға)');
+      info.appendChild(r);
     }
-    row.append(th, info); box.prepend(row);
+    row.appendChild(info); box.prepend(row);
   });
 }
 let clearArmed = false;
@@ -1190,8 +1266,13 @@ async function thumbOf(it) {
 }
 
 // shared by the in-app camera and the phone's own camera
-async function processShot(fn, file, now, fix, thumb) {
+async function processShot(fn, file, now, fix, thumb, quiet) {
   const it = await fn(file, now, fix);
+  return addShot(it, now, thumb, quiet);
+}
+const MAX_SHOTS = 300;
+async function addShot(it, now, thumb, quiet) {
+  if (shots.some(s => s.name === it.name)) it.name = it.name.replace(/(\.\w+)$/, `_${Date.now() % 1000}$1`);   // two files in the same second
   it.thumb = thumb || await thumbOf(it);
   it.time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   it.date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
@@ -1203,12 +1284,252 @@ async function processShot(fn, file, now, fix, thumb) {
   }
   delete it.fix;
   shots.push(it);
-  while (shots.length > 150) delFile(shots.shift().name);
+  while (shots.length > MAX_SHOTS) delFile(shots.shift().name);
   persistShots(); renderList();
-  download(it.blob, it.name);
-  putFile(it.name, it.blob).then(() => { it.stored = true; it.blob = null; persistShots(); }).catch(() => {});   // keep RAM low: read back when needed
+  if (!quiet) download(it.blob, it.name);
+  const keep = putFile(it.name, it.blob).then(() => { it.stored = true; it.blob = null; persistShots(); }).catch(() => {});   // keep RAM low: read back when needed
+  if (quiet) await keep;
   return it;
 }
+// "MyObject_IMG_20261104_..." -> "MyObject" (the folder-like object name used for the ZIP choice)
+const objOf = it => { const m = /^(.*?)_?(IMG|VID)_\d{8}_\d{6}/.exec(it.name); return m && m[1] ? m[1] : ''; };
+// replace the "_N.._E.._A.." / "_NOGPS" part of a file name
+function renameFor(name, fix) {
+  const ll = fix ? `_${fix.lat < 0 ? 'S' : 'N'}${Math.abs(fix.lat).toFixed(6)}_${fix.lon < 0 ? 'W' : 'E'}${Math.abs(fix.lon).toFixed(6)}` : '_NOGPS';
+  const az = fix && fix.dir !== undefined && fix.dir !== null ? `_A${Math.round(fix.dir) % 360}` : '';
+  const re = /_(NOGPS|[NS]\d+(\.\d+)?_[EW]\d+(\.\d+)?)(_A\d{1,3})?(?=(_\d{1,3})?\.\w+$)/;
+  return re.test(name) ? name.replace(re, ll + az) : name.replace(/(\.\w+)$/, ll + az + '$1');
+}
+// write a new place / direction into a file that is already in the list
+async function rewriteShot(it, fix, what) {
+  const old = await blobOf(it); if (!old) return;
+  let out = old, note = '';
+  if (it.kind === 'photo') {
+    const u = new Uint8Array(await old.arrayBuffer()), ex = readExifBasic(u);
+    try { out = replaceExif(u, buildExif({ ...fix, when: new Date(it.ms || Date.now()), make: ex.make, model: ex.model, orientation: ex.orientation })); }
+    catch (e) { note = 'EXIF жазылмады: ' + e.message + '. Координат файл атында.'; }
+  } else if (what === 'place') {
+    try { const t = await tagVideo(new File([old], it.name, { type: old.type || 'video/mp4' }), fix.lat, fix.lon, fix.alt); if (t) out = t; else note = 'Видео метадерегіне жазылмады, координат файл атында.'; }
+    catch (e) { note = 'Видео метадерегіне жазылмады, координат файл атында.'; }
+  }
+  const oldName = it.name, name = renameFor(oldName, fix);
+  if (name !== oldName && shots.some(s => s !== it && s.name === name)) { say('Осындай атты файл тізімде бар.', 'warn'); return; }
+  await putFile(name, out);
+  if (name !== oldName) { await delFile(oldName); if (picked.has(oldName)) { picked.delete(oldName); picked.add(name); } }
+  it.name = name; it.stored = true; it.blob = null;
+  it.lat = fix.lat; it.lon = fix.lon;
+  if (fix.acc) it.acc = fix.acc; else delete it.acc;
+  if (fix.alt !== null && fix.alt !== undefined) it.alt = fix.alt; else delete it.alt;
+  if (fix.dir !== undefined && fix.dir !== null) it.dir = fix.dir; else delete it.dir;
+  it.note = note || (what === 'dir' ? 'Бағыт картадан қойылды' : 'Орны картадан қойылды');
+  persistShots(); renderList();
+  const oldStays = name !== oldName && !it.imported ? ' (Downloads-тағы ескі атты файл өзгермейді)' : '';
+  say(`${note ? note + ' ' : ''}Жаңа файл: ${name}. Телефонға алу үшін «Сақтау» немесе ZIP басыңыз${oldStays}.`, note ? 'warn' : 'ok');
+}
+async function editPlace(it) {
+  const p = await pickOnMap({ mode: 'point', lat: it.lat, lon: it.lon, title: `№${shots.indexOf(it) + 1} · ${it.time || ''} — орнын көрсетіңіз` });
+  if (!p) return;
+  const fix = { lat: p.lat, lon: p.lon, alt: it.alt, dir: it.dir, acc: p.gps ? p.acc : undefined };
+  await rewriteShot(it, fix, 'place');
+}
+async function editDir(it) {
+  const d = await pickOnMap({ mode: 'dir', lat: it.lat, lon: it.lon, dir: it.dir, title: `№${shots.indexOf(it) + 1} · ${it.time || ''} — қай жаққа қарап түсірілді?` });
+  if (d === null || d === undefined) return;
+  await rewriteShot(it, { lat: it.lat, lon: it.lon, alt: it.alt, acc: it.acc, dir: d.dir }, 'dir');
+}
+
+// ===== Map picker (Esri imagery + roads): a point, or a direction from a point =====
+const pk = { gen: 0, z: 17, cx: 0, cy: 0, mode: 'point', lat: 0, lon: 0, tgt: null, dir: null, resolve: null, ptrs: new Map(), moved: 0, pinch: 0, raf: 0 };
+function pxToLL(x, y, z) { const n = 2 ** z * 256, lon = x / n * 360 - 180, la = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))); return [la * RHO, lon]; }
+function getRefTile(z, x, y) {   // street / place names on top of the photo map
+  const k = `r${z}/${y}/${x}`;
+  if (!tileCache.has(k)) {
+    tileCache.set(k, fetch(`https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/${z}/${y}/${x}`)
+      .then(r => (r.ok ? r.blob() : Promise.reject())).then(b => createImageBitmap(b)).catch(() => null));
+    if (tileCache.size > 160) tileCache.delete(tileCache.keys().next().value);
+  }
+  return tileCache.get(k);
+}
+const azBetween = (la1, lo1, la2, lo2) => (Math.atan2((lo2 - lo1) * Math.cos(la1 / RHO) * 111320, (la2 - la1) * 110574) * RHO + 360) % 360;
+function pkDraw() {
+  cancelAnimationFrame(pk.raf);
+  pk.raf = requestAnimationFrame(async () => {
+    const c = $('pkMap'), dpr = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
+    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const z = pk.z, x0 = pk.cx - W / 2, y0 = pk.cy - H / 2, list = [];
+    for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W) / 256); tx++)
+      for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H) / 256); ty++) if (ty >= 0 && ty < 2 ** z) list.push([tx, ty]);
+    const gen = ++pk.gen;
+    pkInfo();
+    // Above z17 Esri often has only "Map data not yet available" here, so z18-19 stretch the z17 tile
+    const iz = Math.min(z, TILE_Z), k = z - iz, f = 2 ** k, sub = 256 / f;
+    const imgs = await Promise.all(list.map(async ([tx, ty]) => {
+      const n = 2 ** z, wx = ((tx % n) + n) % n, px = wx >> k, py = ty >> k;
+      return { tx, ty, sx: (wx & (f - 1)) * sub, sy: (ty & (f - 1)) * sub, im: await getTile(iz, px, py), ref: iz >= 14 ? await getRefTile(iz, px, py) : null };
+    }));
+    if (gen !== pk.gen || $('pk').hidden) return;   // a newer frame is already on its way
+    g.fillStyle = '#26332c'; g.fillRect(0, 0, W, H);
+    for (const t of imgs) {
+      const dx = t.tx * 256 - x0, dy = t.ty * 256 - y0;
+      for (const im of [t.im, t.ref]) if (im) g.drawImage(im, t.sx, t.sy, sub, sub, dx, dy, 257, 257);
+    }
+    const lw = 3;
+    if (pk.mode === 'point') {   // crosshair = the chosen place
+      g.strokeStyle = '#ffd600'; g.lineWidth = lw;
+      g.beginPath(); g.moveTo(W / 2 - 22, H / 2); g.lineTo(W / 2 - 6, H / 2); g.moveTo(W / 2 + 6, H / 2); g.lineTo(W / 2 + 22, H / 2);
+      g.moveTo(W / 2, H / 2 - 22); g.lineTo(W / 2, H / 2 - 6); g.moveTo(W / 2, H / 2 + 6); g.lineTo(W / 2, H / 2 + 22); g.stroke();
+      g.beginPath(); g.arc(W / 2, H / 2, 3, 0, 2 * Math.PI); g.fillStyle = '#ff3b30'; g.fill();
+    } else {
+      const [px, py] = worldPx(pk.lat, pk.lon, z), sx = px - x0, sy = py - y0;
+      if (pk.dir !== null) {
+        const a = (pk.dir - 90) / RHO, r = Math.max(W, H), fov = 55 / RHO;
+        g.beginPath(); g.moveTo(sx, sy); g.arc(sx, sy, r, a - fov / 2, a + fov / 2); g.closePath(); g.fillStyle = 'rgba(255,214,0,.22)'; g.fill();
+        g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); g.strokeStyle = '#ff3b30'; g.lineWidth = lw; g.stroke();
+      }
+      if (pk.tgt) { const [tx, ty] = worldPx(pk.tgt[0], pk.tgt[1], z); g.beginPath(); g.arc(tx - x0, ty - y0, 7, 0, 2 * Math.PI); g.strokeStyle = '#ffd600'; g.lineWidth = lw; g.stroke(); }
+      g.beginPath(); g.arc(sx, sy, 8, 0, 2 * Math.PI); g.fillStyle = '#ff3b30'; g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke();
+    }
+    g.font = '600 11px system-ui, sans-serif'; g.fillStyle = 'rgba(255,255,255,.8)'; g.fillText('© Esri', 8, H - (c.parentNode.querySelector('.pkBottom').offsetHeight + 6));
+    pkInfo();
+  });
+}
+function pkInfo() {
+  const k = $('crs').value;
+  if (pk.mode === 'point') {
+    const [la, lo] = pxToLL(pk.cx, pk.cy, pk.z), [E, N] = project(k, la, lo);
+    $('pkInfo').innerHTML = `${esc(pk.title)}<br><b>${la.toFixed(7)}, ${lo.toFixed(7)}</b><br>${crsFits(k, lo) ? `${esc(crsName(k))}: X ${E.toFixed(3)} · Y ${N.toFixed(3)}` : ''}<br><span style="opacity:.8">Картаны жылжытып, сары кресті орынға қойыңыз</span>`;
+  } else {
+    $('pkInfo').innerHTML = `${esc(pk.title)}<br><b>${pk.dir === null ? 'Бағыт таңдалмады' : 'Азимут: ' + dirText(pk.dir)}</b><br><span style="opacity:.8">Фото қараған затты картадан нұқыңыз (қызыл нүкте — түсірген орын)</span>`;
+  }
+}
+function pickOnMap(o) {
+  if (pk.resolve) pk.resolve(null);
+  Object.assign(pk, { mode: o.mode, title: o.title || '', tgt: null, dir: o.dir === undefined ? null : o.dir, moved: 0, gpsAt: null });
+  const start = o.lat !== undefined ? [o.lat, o.lon] : last ? [last.lat, last.lon] : (shots.filter(s => s.lat !== undefined).slice(-1).map(s => [s.lat, s.lon])[0] || [42.3417, 69.5901]);
+  if (o.mode === 'dir') { pk.lat = o.lat; pk.lon = o.lon; }
+  pk.z = o.lat !== undefined || last ? 18 : 13;
+  [pk.cx, pk.cy] = worldPx(start[0], start[1], pk.z);
+  $('pkTxt').value = '';
+  $('pkTxt').placeholder = o.mode === 'point' ? `42.341700, 69.590100  немесе  X Y (${crsName($('crs').value)})` : 'Азимут, градус (мыс. 125)';
+  $('pkHere').hidden = o.mode !== 'point';
+  $('pk').hidden = false;
+  pkDraw();
+  return new Promise(res => { pk.resolve = res; });
+}
+function pkClose(val) { $('pk').hidden = true; const r = pk.resolve; pk.resolve = null; if (r) r(val); }
+function pkZoom(d, fx, fy) {
+  const nz = Math.min(19, Math.max(3, pk.z + d)); if (nz === pk.z) return;
+  const c = $('pkMap'), W = c.clientWidth, H = c.clientHeight;
+  fx = fx === undefined ? W / 2 : fx; fy = fy === undefined ? H / 2 : fy;
+  const s = 2 ** (nz - pk.z), wx = pk.cx - W / 2 + fx, wy = pk.cy - H / 2 + fy;   // keep the point under the finger in place
+  pk.cx = wx * s - fx + W / 2; pk.cy = wy * s - fy + H / 2; pk.z = nz; pkDraw();
+}
+// "42.34, 69.59" -> WGS-84; "X Y" (big numbers) -> the selected coordinate system, inverted numerically
+function invProject(k, E, N, guess) {
+  let [la, lo] = guess || (last ? [last.lat, last.lon] : [CRS[k] && CRS[k].lat0 ? CRS[k].lat0 : 42.3, CRS[k] ? CRS[k].cm : 69.6]);
+  for (let i = 0; i < 30; i++) {
+    const [e0, n0] = project(k, la, lo), h = 1e-6, [e1, n1] = project(k, la + h, lo), [e2, n2] = project(k, la, lo + h);
+    const a = (e1 - e0) / h, b = (e2 - e0) / h, c = (n1 - n0) / h, d = (n2 - n0) / h, det = a * d - b * c, dx = E - e0, dy = N - n0;
+    if (!det) break;
+    const dla = (d * dx - b * dy) / det, dlo = (a * dy - c * dx) / det;
+    la += dla; lo += dlo;
+    if (Math.abs(dla) + Math.abs(dlo) < 1e-11) break;
+  }
+  const [e, n] = project(k, la, lo);
+  return Math.hypot(e - E, n - N) < 0.01 ? [la, lo] : null;
+}
+function pkEnter() {
+  const t = $('pkTxt').value.trim().replace(/,(?=\d{3}\b)/g, '').split(/[\s;,]+/).map(s => parseFloat(s.replace(',', '.'))).filter(isFinite);
+  if (pk.mode === 'dir') {
+    if (t.length !== 1) { $('pkInfo').textContent = 'Азимутты градуспен жазыңыз, мыс. 125'; return; }
+    pk.dir = ((t[0] % 360) + 360) % 360; pk.tgt = null; pkDraw(); return;
+  }
+  if (t.length < 2) { $('pkInfo').textContent = 'Екі сан жазыңыз: ендік, бойлық (немесе X Y)'; return; }
+  let ll = null;
+  if (Math.abs(t[0]) <= 90 && Math.abs(t[1]) <= 180) ll = [t[0], t[1]];
+  else { const k = $('crs').value; ll = invProject(k, t[0], t[1]); if (!ll) { $('pkInfo').textContent = `${crsName($('crs').value)} жүйесінде бұл X Y табылмады`; return; } }
+  [pk.cx, pk.cy] = worldPx(ll[0], ll[1], pk.z); pkDraw();
+}
+(() => {
+  const c = $('pkMap');
+  c.addEventListener('pointerdown', e => { c.setPointerCapture(e.pointerId); pk.ptrs.set(e.pointerId, [e.clientX, e.clientY]); pk.moved = 0; pk.pinch = 0; });
+  c.addEventListener('pointermove', e => {
+    const p = pk.ptrs.get(e.pointerId); if (!p) return;
+    if (pk.ptrs.size === 2) {   // pinch: one zoom step per ~1.6x finger spread
+      const [a, b] = [...pk.ptrs.values()], d0 = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      pk.ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+      const [a2, b2] = [...pk.ptrs.values()], d1 = Math.hypot(a2[0] - b2[0], a2[1] - b2[1]);
+      pk.pinch += Math.log(d1 / d0); pk.moved = 99;
+      if (Math.abs(pk.pinch) > 0.47) { const r = c.getBoundingClientRect(); pkZoom(Math.sign(pk.pinch), (a2[0] + b2[0]) / 2 - r.left, (a2[1] + b2[1]) / 2 - r.top); pk.pinch = 0; }
+      return;
+    }
+    const dx = e.clientX - p[0], dy = e.clientY - p[1];
+    pk.moved += Math.abs(dx) + Math.abs(dy);
+    if (pk.moved > 6) { pk.cx -= dx; pk.cy -= dy; pkDraw(); }
+    pk.ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  });
+  const up = e => {
+    if (!pk.ptrs.has(e.pointerId)) return;
+    pk.ptrs.delete(e.pointerId);
+    if (pk.ptrs.size || pk.moved > 6 || pk.mode !== 'dir') return;
+    const r = c.getBoundingClientRect(), W = c.clientWidth, H = c.clientHeight;   // a tap aims the photo at that spot
+    const [la, lo] = pxToLL(pk.cx - W / 2 + e.clientX - r.left, pk.cy - H / 2 + e.clientY - r.top, pk.z);
+    if (Math.abs(la - pk.lat) + Math.abs(lo - pk.lon) < 1e-7) return;
+    pk.tgt = [la, lo]; pk.dir = azBetween(pk.lat, pk.lon, la, lo); pkDraw();
+  };
+  c.addEventListener('pointerup', up); c.addEventListener('pointercancel', e => pk.ptrs.delete(e.pointerId));
+  c.addEventListener('wheel', e => { e.preventDefault(); const r = c.getBoundingClientRect(); pkZoom(e.deltaY < 0 ? 1 : -1, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  window.addEventListener('resize', () => { if (!$('pk').hidden) pkDraw(); });
+  $('pkPlus').onclick = () => pkZoom(1); $('pkMinus').onclick = () => pkZoom(-1);
+  $('pkHere').onclick = () => { if (!last) { $('pkInfo').textContent = 'GPS әлі жоқ'; return; } pk.z = Math.max(pk.z, 17); [pk.cx, pk.cy] = worldPx(last.lat, last.lon, pk.z); pk.gpsAt = [pk.cx, pk.cy, pk.z]; pkDraw(); };
+  $('pkGo').onclick = pkEnter;
+  $('pkTxt').addEventListener('keydown', e => { if (e.key === 'Enter') pkEnter(); });
+  $('pkCancel').onclick = () => pkClose(null);
+  $('pkOk').onclick = () => {
+    if (pk.mode === 'dir') { if (pk.dir === null) { $('pkInfo').textContent = 'Алдымен картадан бағытты нұқыңыз немесе азимут жазыңыз'; return; } pkClose({ dir: pk.dir }); return; }
+    const [la, lo] = pxToLL(pk.cx, pk.cy, pk.z), g = pk.gpsAt && pk.gpsAt[0] === pk.cx && pk.gpsAt[1] === pk.cy && pk.gpsAt[2] === pk.z;
+    pkClose({ lat: la, lon: lo, gps: g, acc: g && last ? last.acc : undefined });
+  };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('pk').hidden) pkClose(null); });
+})();
+
+// ===== Files from the phone's gallery: read their EXIF place; the rest get a place on the map =====
+async function importFile(file) {
+  const isVid = /^video\//.test(file.type) || /\.(mp4|mov|3gp|webm)$/i.test(file.name);
+  let when = new Date(file.lastModified || Date.now()), fix = null, blob = file, note = '';
+  if (isVid) {
+    const ext = (file.name.match(/\.(\w+)$/) || [, 'mp4'])[1].toLowerCase();
+    const it = { blob, name: fileName('VID', when, null, ext), kind: 'video', note: 'Координат жоқ — «Орнын қою» басыңыз', imported: true };
+    return addShot(it, when, null, true);
+  }
+  let u = new Uint8Array(await file.arrayBuffer());
+  if (!(u[0] === 0xFF && u[1] === 0xD8)) {   // PNG / WebP / HEIC (if the phone can decode it) -> JPEG
+    const bm = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => null);
+    if (!bm) throw new Error(`${file.name}: бұл суретті ашу мүмкін емес (HEIC болса — телефон баптауынан JPEG-ке ауыстырыңыз)`);
+    const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height; c.getContext('2d').drawImage(bm, 0, 0); bm.close();
+    u = new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92))).arrayBuffer()); c.width = c.height = 0;
+  }
+  const ex = readExifBasic(u);
+  if (ex.date && isFinite(ex.date)) when = ex.date;
+  if (ex.lat !== undefined) fix = { lat: ex.lat, lon: ex.lon, alt: ex.alt, dir: ex.dir };
+  try { blob = fix ? replaceExif(u, buildExif({ ...fix, when, make: ex.make, model: ex.model, orientation: ex.orientation })) : new Blob([u], { type: 'image/jpeg' }); }
+  catch (e) { blob = new Blob([u], { type: 'image/jpeg' }); }
+  note = fix ? 'Координат фотоның EXIF-інен алынды' : 'Координат жоқ — «Орнын қою» басыңыз';
+  const it = { blob, name: fileName('IMG', when, fix, 'jpg'), kind: 'photo', fix, note, imported: true };
+  return addShot(it, when, null, true);
+}
+$('bAdd').onclick = () => $('inAdd').click();
+$('inAdd').onchange = async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  if (!files.length) return;
+  let ok = 0, nogps = 0; const bad = [];
+  for (const [i, f] of files.entries()) {
+    say(`Қосылуда… ${i + 1}/${files.length}`);
+    try { const it = await importFile(f); ok++; if (it.lat === undefined) nogps++; } catch (err) { bad.push(err.message); }
+  }
+  say([`Тізімге қосылды: ${ok}`, nogps ? `координаты жоқ: ${nogps} — әрқайсысында «Орнын қою» басыңыз` : '', ...bad].filter(Boolean).join(' · '), bad.length || nogps ? 'warn' : 'ok');
+};
 
 // ===== One ZIP for the computer: files + GeoFoto.kml (Google Earth) + GeoFoto.csv =====
 const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -1242,6 +1563,14 @@ async function makeZip(entries, progress) {
   end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true); end.setUint32(12, cd, true); end.setUint32(16, off, true);
   return new Blob([...parts, ...central, end.buffer], { type: 'application/zip' });
 }
+// point, plus a yellow 25 m line toward the shooting direction (Google Earth / Maps draw it as a vector)
+const VEC_M = 25;
+function kmlGeom(it) {
+  const p = `${it.lon.toFixed(7)},${it.lat.toFixed(7)},0`;
+  if (it.dir === undefined || it.dir === null) return `<Point><coordinates>${p}</coordinates></Point>`;
+  const a = it.dir / RHO, la2 = it.lat + VEC_M * Math.cos(a) / 110574, lo2 = it.lon + VEC_M * Math.sin(a) / (111320 * Math.cos(it.lat / RHO));
+  return `<MultiGeometry><Point><coordinates>${p}</coordinates></Point><LineString><tessellate>1</tessellate><coordinates>${p} ${lo2.toFixed(7)},${la2.toFixed(7)},0</coordinates></LineString></MultiGeometry>`;
+}
 function kmlFor(list, title) {
   const k = $('crs').value, x = s => esc(s);
   const marks = list.map(it => {
@@ -1250,11 +1579,11 @@ function kmlFor(list, title) {
       (it.kind === 'photo' ? `<img src="${u}" width="640">` : '') +
       `<p><b>${x(it.name)}</b><br>${it.date} ${it.time}<br>WGS-84: ${it.lat.toFixed(7)}, ${it.lon.toFixed(7)}${it.acc ? ` (±${it.acc.toFixed(1)} м)` : ''}` +
       (crsFits(k, it.lon) ? `<br>${x(crsName(k))} (AutoCAD X, Y): ${E.toFixed(3)}, ${N.toFixed(3)}` : '') + (it.dir !== undefined ? `<br>Бағыт: ${dirText(it.dir)}` : '') +
-      `</p><p><a href="${u}">▶ Түпнұсқа файлды ашу</a></p></div>]]></description><Point><coordinates>${it.lon.toFixed(7)},${it.lat.toFixed(7)},0</coordinates></Point></Placemark>`;
+      `</p><p><a href="${u}">▶ Түпнұсқа файлды ашу</a></p></div>]]></description>` + kmlGeom(it) + '</Placemark>';
   }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${x(title)}</name>` +
-    '<Style id="FOTO"><IconStyle><color>ffeb6f1f</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/camera.png</href></Icon></IconStyle></Style>' +
-    '<Style id="VIDEO"><IconStyle><color>ff202dd9</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/movies.png</href></Icon></IconStyle></Style>\n' +
+    '<Style id="FOTO"><IconStyle><color>ffeb6f1f</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/camera.png</href></Icon></IconStyle><LineStyle><color>ff00d6ff</color><width>3</width></LineStyle></Style>' +
+    '<Style id="VIDEO"><IconStyle><color>ff202dd9</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/movies.png</href></Icon></IconStyle><LineStyle><color>ff00d6ff</color><width>3</width></LineStyle></Style>\n' +
     marks + '\n</Document></kml>\n';
 }
 function csvFor(list) {
@@ -1267,22 +1596,34 @@ function csvFor(list) {
   });
   return '﻿' + rows.join('\r\n') + '\r\n';
 }
+// What goes into the ZIP: one day, one object (the name before IMG_/VID_), or the files ticked in the list
 function fillZipDays() {
-  const days = [...new Set(shots.map(s => s.date).filter(Boolean))].sort().reverse(), sel = $('zipDay'), keep = sel.value;
+  const sel = $('zipDay'), keep = sel.value || 'd:' + (shots.length ? shots[shots.length - 1].date : '');
+  const days = [...new Set(shots.map(s => s.date).filter(Boolean))].sort().reverse();
+  const objs = [...new Set(shots.map(objOf).filter(Boolean))].sort();
   sel.textContent = '';
-  for (const d of days) sel.appendChild(new Option(`${d} · ${shots.filter(s => s.date === d).length} файл`, d));
-  if (days.includes(keep)) sel.value = keep;
-  $('bZip').disabled = !days.length;
+  const grp = (label, rows) => { if (!rows.length) return; const g = document.createElement('optgroup'); g.label = label; rows.forEach(([t, v]) => g.appendChild(new Option(t, v))); sel.appendChild(g); };
+  grp('Күн бойынша', days.map(d => [`${d} · ${shots.filter(s => s.date === d).length} файл`, 'd:' + d]));
+  grp('Нысан (папка) бойынша', objs.map(o => [`${o.replace(/_/g, ' ')} · ${shots.filter(s => objOf(s) === o).length} файл`, 'o:' + o]));
+  grp('Таңдау', [[`Өзім белгілеймін${picked.size ? ` · ${picked.size} файл` : ''}`, 'pick']]);
+  const vals = [...sel.options].map(o => o.value);
+  sel.value = vals.includes(keep) ? keep : vals[0];
+  $('bZip').disabled = !shots.length;
+}
+function zipChoice() {
+  const v = $('zipDay').value || '', today = new Date(), d0 = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  if (v === 'pick') return { list: shots.filter(s => picked.has(s.name)), title: `${objPart()}GeoFoto_${d0}_tandau` };
+  if (v.startsWith('o:')) { const o = v.slice(2); return { list: shots.filter(s => objOf(s) === o), title: `${o}_GeoFoto_${d0}` }; }
+  const day = v.slice(2); return { list: shots.filter(s => s.date === day), title: `${objPart()}GeoFoto_${day}` };
 }
 async function makeDayZip() {
-  const day = $('zipDay').value, list = shots.filter(s => s.date === day);
-  if (!list.length) return;
+  const { list, title } = zipChoice();
+  if (!list.length) { say($('zipDay').value === 'pick' ? 'Тізімнен файлдарды белгілеңіз (суретті немесе галочканы басыңыз).' : 'Бұл таңдауда файл жоқ.', 'warn'); return; }
   $('bZip').disabled = true;
   try {
     const entries = [], missing = [];
     for (const it of list) { const b = it.blob || await getFile(it.name); if (b) entries.push({ name: it.name, blob: b, date: new Date(it.ms || Date.now()) }); else missing.push(it.name); }
     const geo = list.filter(s => s.lat !== undefined && entries.some(e => e.name === s.name));
-    const title = `${objPart()}GeoFoto_${day}`;
     entries.push({ name: 'GeoFoto.kml', blob: new Blob([kmlFor(geo, title)], { type: 'application/vnd.google-earth.kml+xml' }) });
     entries.push({ name: 'GeoFoto.csv', blob: new Blob([csvFor(geo)], { type: 'text/csv' }) });
     const zip = await makeZip(entries, (i, n) => say(`ZIP жиналуда… ${i}/${n}`));
@@ -1307,6 +1648,9 @@ $('camSys').onclick = () => { const m = camMode; closeCam(); if (m === 'video') 
 $('mPhoto').onclick = () => setCamMode('photo');
 $('mVideo').onclick = () => setCamMode('video');
 $('bZip').onclick = makeDayZip;
+$('zipDay').onchange = renderList;
+$('bPickAll').onclick = () => { shots.forEach(s => picked.add(s.name)); renderList(); };
+$('bPickNone').onclick = () => { picked.clear(); renderList(); };
 $('bSP').onclick = () => $('inSP').click();
 $('inSP').onchange = async e => {
   const files = [...e.target.files]; e.target.value = '';
@@ -1359,7 +1703,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
 renderList();
 startGps();
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});   // ask Android not to evict the copies
-window.GK = { buildExif, replaceExif, tagVideo, project, onFix, handlePhoto, handleVideo, fileName, parseSP, makeZip, kmlFor, csvFor, CRS, stampLines };
+window.GK = { buildExif, replaceExif, readExifBasic, tagVideo, project, invProject, onFix, handlePhoto, handleVideo, fileName, renameFor, objOf, parseSP, makeZip, kmlFor, csvFor, CRS, stampLines, importFile, rewriteShot, pickOnMap, pk, shots: () => shots };
 </script>
 </body>
 </html>
