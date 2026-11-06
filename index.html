@@ -98,6 +98,19 @@ details li{margin:4px 0}
 .pkBottom input{font:15px var(--sans);flex:1;min-width:0;padding:10px;border-radius:8px;border:0;color:#111;background:#fff}
 .pkBottom .btn{background:rgba(255,255,255,.15);color:#fff;border-color:transparent;padding:10px 14px}
 .pkBottom .btn.primary{background:#ffd600;color:#111}
+/* Photo viewer: the full photo / video from the list or from a map marker */
+#vw{position:fixed;inset:0;z-index:70;background:#000;color:#fff;touch-action:none}
+#vwStage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+#vwStage img,#vwStage video{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.vwTop{position:absolute;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top,0px));display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.vwTop .hud{font:600 13px/1.4 var(--sans);min-width:0;overflow-wrap:anywhere}
+.vwTop .hud b{font:800 16px/1.3 var(--sans)}
+.vwNav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:64px;border:0;border-radius:10px;background:rgba(0,0,0,.5);color:#fff;font:700 30px var(--sans)}
+.vwNav.l{left:8px}.vwNav.r{right:8px}
+.vwNav:disabled{opacity:.25}
+.vwBottom{position:absolute;left:0;right:0;bottom:0;padding:10px 10px calc(14px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.6);display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.vwBottom .btn{background:rgba(255,255,255,.15);color:#fff;border-color:transparent;padding:10px 14px;text-decoration:none}
+.item .ph{cursor:zoom-in}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -180,15 +193,29 @@ details li{margin:4px 0}
     </div>
   </div>
 
+  <div id="vw" hidden>
+    <div id="vwStage"></div>
+    <div class="vwTop"><div class="hud" id="vwInfo" aria-live="polite"></div><button class="camBtn r" id="vwClose" aria-label="Жабу">✕</button></div>
+    <button class="vwNav l" id="vwPrev" aria-label="Алдыңғы">‹</button>
+    <button class="vwNav r" id="vwNext" aria-label="Келесі">›</button>
+    <div class="vwBottom">
+      <button class="btn" id="vwMap">Картада</button>
+      <a class="btn" id="vwG" target="_blank" rel="noopener">Google Maps</a>
+      <button class="btn" id="vwShare">Бөлісу</button>
+      <button class="btn" id="vwSave">Сақтау</button>
+    </div>
+  </div>
+
   <section class="card" id="listCard" hidden>
     <div class="row" style="justify-content:space-between;margin-bottom:10px"><b>Түсірілімдер</b><span class="meta" id="count"></span></div>
     <div class="row" style="margin-bottom:12px">
-      <a class="btn" id="allYandex" href="#" target="_blank" rel="noopener" style="text-decoration:none">Барлығы Yandex картада</a>
+      <button class="btn" id="bMapAll" title="Барлық фото картада: иконканы басқанда фото ашылады">Барлығы картада (фотомен)</button>
       <button class="btn" id="bClear">Тізімді тазалау</button>
     </div>
     <div class="row" style="margin-bottom:12px">
       <select id="zipDay" aria-label="ZIP-ке қай файлдар кіреді: күн, нысан немесе өзіңіз белгілегендер" style="flex:1;min-width:0"></select>
       <button class="btn primary" id="bZip">Компьютерге (ZIP)</button>
+      <button class="btn" id="bKmz" title="Google Earth үшін бір файл: картада фото иконкалары, басқанда фото ашылады">Google Earth (KMZ)</button>
     </div>
     <div class="row" id="pickRow" style="margin-bottom:12px" hidden>
       <button class="btn" id="bPickAll">Барлығын белгілеу</button>
@@ -212,7 +239,10 @@ details li{margin:4px 0}
         <li><b>Басқа фотоларға координат</b>: «Телефоннан фото/видео қосу» — галереядан бірнеше файл таңдаңыз. EXIF-інде координаты бар фото бірден тізімге түседі; жоқтарына <b>«Орны»</b> басып картадан (немесе координатты жазып) орнын қоясыз — координат EXIF-ке жазылады, файл аты GEOFOTO оқитын түрге келеді. Сосын «Сақтау» немесе ZIP.</li>
         <li>Компас дұрыс көрсетпесе, телефонды ауада «8» санын сызып бірнеше рет айналдырыңыз (калибрлеу). Темір, машина, электр сымдарының жанында компас қателеседі.</li>
         <li>Координат үш жерге жазылады: фотоның EXIF-іне / видеоның метадерегіне, файл атына (<code>_N42.341700_E69.590100</code>) және (қосулы болса) суреттің өзіне.</li>
-        <li>Әр түсірілімнің жанындағы <b>Google / Yandex / 2GIS</b> сол нүктені картада ашады. «Барлығы Yandex картада» — барлық нүкте нөмірімен (нөмір → тізімдегі уақыт).</li>
+        <li><b>Фотоны қарау</b>: тізімдегі кішкентай суретті басыңыз — фото (видео) толық ашылады, ‹ › немесе саусақпен жанына сырғытып келесісіне өтесіз.</li>
+        <li><b>«Барлығы картада (фотомен)»</b> — барлық түсірілім спутник картасында фото иконкасымен (сары сызық — бағыты). Иконканы басқанда фото ашылады. Интернет керек.</li>
+        <li><b>«Google Earth (KMZ)»</b> — таңдалған күн / нысан / белгіленген фотолар бір .kmz файлға жиналады (фотоның өзі ішінде). Google Earth (телефон қосымшасы, Earth Pro немесе earth.google.com → Жобалар → KML файлын импорттау) ашқанда картада фото иконкалары тұрады, басқанда фото көрінеді.</li>
+        <li>Әр түсірілімнің жанындағы <b>Google / Yandex / 2GIS</b> сол бір нүктені картада ашады.</li>
         <li>Компьютерге USB кабельмен немесе Telegram-да <b>«Файл ретінде»</b> жіберіңіз, сосын AutoCAD-та <b>GEOFOTO</b> командасы (Mgeo) немесе GeoFoto.html.</li>
       </ol>
     </details>
@@ -1203,17 +1233,10 @@ function persistShots() {
     try { localStorage.setItem(SHOTS_KEY, JSON.stringify(keep.map(({ thumb, ...m }) => m))); } catch (e2) {}
   }
 }
-// all points on one Yandex map: numbered markers (blue photo, red video)
-function yandexAll() {
-  const pts = shots.filter(s => s.lat !== undefined).slice(-99);
-  if (!pts.length) return '#';
-  const pt = pts.map((s, i) => `${s.lon.toFixed(7)},${s.lat.toFixed(7)},pm2${s.kind === 'video' ? 'rd' : 'bl'}l${shots.indexOf(s) + 1 <= 99 ? shots.indexOf(s) + 1 : ''}`).join('~');
-  return `https://yandex.kz/maps/?pt=${pt}&l=map`;
-}
 function renderList() {
   $('listCard').hidden = !shots.length;
   $('count').textContent = shots.length + ' файл';
-  $('allYandex').href = yandexAll();
+  $('bMapAll').disabled = !shots.some(s => s.lat !== undefined);
   fillZipDays();
   const box = $('list'), picking = $('zipDay').value === 'pick'; box.textContent = '';
   $('pickRow').hidden = !picking;
@@ -1229,7 +1252,12 @@ function renderList() {
       cb.onchange = flip; th.onclick = flip; th.style.cursor = 'pointer';
       const wrap = document.createElement('div'); wrap.style.cssText = 'display:grid;gap:6px;justify-items:center'; wrap.append(th, cb);
       row.appendChild(wrap);
-    } else row.appendChild(th);
+    } else {   // tap the thumbnail to see the photo itself
+      th.onclick = () => openViewer(it); th.title = 'Фотоны ашу';
+      th.setAttribute('role', 'button'); th.tabIndex = 0; th.setAttribute('aria-label', `№${idx + 1} фотоны ашу`);
+      th.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openViewer(it); } };
+      row.appendChild(th);
+    }
     const info = document.createElement('div');
     const tm = document.createElement('div'); tm.className = 'tm';
     tm.textContent = `№${idx + 1} · ${it.time || ''} · ${it.kind === 'video' ? 'видео' : 'фото'}${it.dir !== undefined ? ' · ' + dirText(it.dir) : ''}`;
@@ -1375,7 +1403,8 @@ function pkDraw() {
       for (const im of [t.im, t.ref]) if (im) g.drawImage(im, t.sx, t.sy, sub, sub, dx, dy, 257, 257);
     }
     const lw = 3;
-    if (pk.mode === 'point') {   // crosshair = the chosen place
+    if (pk.mode === 'all') drawMarkers(g, x0, y0, z, W, H);
+    else if (pk.mode === 'point') {   // crosshair = the chosen place
       g.strokeStyle = '#ffd600'; g.lineWidth = lw;
       g.beginPath(); g.moveTo(W / 2 - 22, H / 2); g.lineTo(W / 2 - 6, H / 2); g.moveTo(W / 2 + 6, H / 2); g.lineTo(W / 2 + 22, H / 2);
       g.moveTo(W / 2, H / 2 - 22); g.lineTo(W / 2, H / 2 - 6); g.moveTo(W / 2, H / 2 + 6); g.lineTo(W / 2, H / 2 + 22); g.stroke();
@@ -1396,7 +1425,10 @@ function pkDraw() {
 }
 function pkInfo() {
   const k = $('crs').value;
-  if (pk.mode === 'point') {
+  if (pk.mode === 'all') {
+    const n = shots.filter(s => s.lat !== undefined).length, no = shots.length - n;
+    $('pkInfo').innerHTML = `<b>Барлығы картада: ${n}</b>${no ? ` · координатсыз ${no}` : ''}<br><span style="opacity:.8">Фото иконкасын басыңыз — фото ашылады. Сары сызық — түсіру бағыты.</span>`;
+  } else if (pk.mode === 'point') {
     const [la, lo] = pxToLL(pk.cx, pk.cy, pk.z), [E, N] = project(k, la, lo);
     $('pkInfo').innerHTML = `${esc(pk.title)}<br><b>${la.toFixed(7)}, ${lo.toFixed(7)}</b><br>${crsFits(k, lo) ? `${esc(crsName(k))}: X ${E.toFixed(3)} · Y ${N.toFixed(3)}` : ''}<br><span style="opacity:.8">Картаны жылжытып, сары кресті орынға қойыңыз</span>`;
   } else {
@@ -1410,9 +1442,12 @@ function pickOnMap(o) {
   if (o.mode === 'dir') { pk.lat = o.lat; pk.lon = o.lon; }
   pk.z = o.lat !== undefined || last ? 18 : 13;
   [pk.cx, pk.cy] = worldPx(start[0], start[1], pk.z);
+  if (o.mode === 'all' && o.lat === undefined) pkFitAll();
   $('pkTxt').value = '';
   $('pkTxt').placeholder = o.mode === 'point' ? `42.341700, 69.590100  немесе  X Y (${crsName($('crs').value)})` : 'Азимут, градус (мыс. 125)';
-  $('pkHere').hidden = o.mode !== 'point';
+  $('pkHere').hidden = o.mode === 'dir';
+  $('pkTxt').parentNode.hidden = $('pkOk').hidden = o.mode === 'all';
+  $('pkCancel').textContent = o.mode === 'all' ? '✕ Жабу' : 'Бас тарту';
   $('pk').hidden = false;
   pkDraw();
   return new Promise(res => { pk.resolve = res; });
@@ -1472,8 +1507,10 @@ function pkEnter() {
   const up = e => {
     if (!pk.ptrs.has(e.pointerId)) return;
     pk.ptrs.delete(e.pointerId);
-    if (pk.ptrs.size || pk.moved > 6 || pk.mode !== 'dir') return;
+    if (pk.ptrs.size || pk.moved > 6) return;
     const r = c.getBoundingClientRect(), W = c.clientWidth, H = c.clientHeight;   // a tap aims the photo at that spot
+    if (pk.mode === 'all') { const it = hitMarker(e.clientX - r.left, e.clientY - r.top, W, H); if (it) openViewer(it, true); return; }
+    if (pk.mode !== 'dir') return;
     const [la, lo] = pxToLL(pk.cx - W / 2 + e.clientX - r.left, pk.cy - H / 2 + e.clientY - r.top, pk.z);
     if (Math.abs(la - pk.lat) + Math.abs(lo - pk.lon) < 1e-7) return;
     pk.tgt = [la, lo]; pk.dir = azBetween(pk.lat, pk.lon, la, lo); pkDraw();
@@ -1491,7 +1528,117 @@ function pkEnter() {
     const [la, lo] = pxToLL(pk.cx, pk.cy, pk.z), g = pk.gpsAt && pk.gpsAt[0] === pk.cx && pk.gpsAt[1] === pk.cy && pk.gpsAt[2] === pk.z;
     pkClose({ lat: la, lon: lo, gps: g, acc: g && last ? last.acc : undefined });
   };
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('pk').hidden) pkClose(null); });
+  document.addEventListener('keydown', e => {
+    if (!$('vw').hidden) { if (e.key === 'Escape') closeViewer(); else if (e.key === 'ArrowLeft') vwStep(-1); else if (e.key === 'ArrowRight') vwStep(1); return; }
+    if (e.key === 'Escape' && !$('pk').hidden) pkClose(null);
+  });
+})();
+
+// ===== All shots on the map: photo thumbnails as icons, a tap opens the photo =====
+const mkImg = new Map();   // file name -> <img> of its thumbnail
+function mkIcon(it) {
+  if (!it.thumb) return null;
+  let im = mkImg.get(it.name);
+  if (!im) { im = new Image(); im.onload = () => { if (!$('pk').hidden && pk.mode === 'all') pkDraw(); }; im.src = it.thumb; mkImg.set(it.name, im); }
+  return im.complete && im.naturalWidth ? im : null;
+}
+const MK_R = 21;   // marker radius, px
+function markerPos(x0, y0, z) {
+  return shots.filter(s => s.lat !== undefined).map(it => { const [px, py] = worldPx(it.lat, it.lon, z); return { it, x: px - x0, y: py - y0 }; });
+}
+function drawMarkers(g, x0, y0, z, W, H) {
+  const ms = markerPos(x0, y0, z).filter(m => m.x > -60 && m.y > -60 && m.x < W + 60 && m.y < H + 60);
+  const len = Math.max(30, Math.min(90, VEC_M / (156543.03 * Math.cos(ms.length ? ms[0].it.lat / RHO : 0.74) / 2 ** z)));   // 25 m, but visible
+  g.lineCap = 'round';
+  for (const m of ms) if (m.it.dir !== undefined) {   // the shooting direction under the icon
+    const a = (m.it.dir - 90) / RHO;
+    g.beginPath(); g.moveTo(m.x, m.y); g.lineTo(m.x + Math.cos(a) * (MK_R + len), m.y + Math.sin(a) * (MK_R + len));
+    g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 6; g.stroke(); g.strokeStyle = '#ffd600'; g.lineWidth = 3; g.stroke();
+  }
+  for (const m of ms) {
+    const { it, x, y } = m, im = mkIcon(it), col = it.kind === 'video' ? '#e53935' : '#1f6feb';
+    g.beginPath(); g.arc(x, y, MK_R + 3, 0, 2 * Math.PI); g.fillStyle = col; g.fill();
+    g.save(); g.beginPath(); g.arc(x, y, MK_R, 0, 2 * Math.PI); g.clip();
+    if (im) { const s = Math.max(2 * MK_R / im.naturalWidth, 2 * MK_R / im.naturalHeight), w = im.naturalWidth * s, h = im.naturalHeight * s; g.drawImage(im, x - w / 2, y - h / 2, w, h); }
+    else { g.fillStyle = '#222'; g.fill(); g.fillStyle = '#fff'; g.font = '700 16px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(it.kind === 'video' ? '▶' : '📷', x, y + 1); }
+    g.restore();
+    const n = String(shots.indexOf(it) + 1);   // list number, bottom right
+    g.font = '700 11px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const tw = Math.max(18, g.measureText(n).width + 8), bx = x + MK_R - 4, by = y + MK_R - 4;
+    g.fillStyle = col; g.beginPath(); g.roundRect ? g.roundRect(bx - tw / 2, by - 9, tw, 18, 9) : g.rect(bx - tw / 2, by - 9, tw, 18); g.fill();
+    g.fillStyle = '#fff'; g.fillText(n, bx, by + 0.5);
+  }
+  g.textAlign = 'start'; g.textBaseline = 'alphabetic';
+}
+function hitMarker(x, y, W, H) {   // the top-most (last drawn) icon under the finger
+  const ms = markerPos(pk.cx - W / 2, pk.cy - H / 2, pk.z);
+  let best = null;
+  for (const m of ms) if (Math.hypot(m.x - x, m.y - y) <= MK_R + 8) best = m;
+  return best && best.it;
+}
+function pkFitAll() {
+  const pts = shots.filter(s => s.lat !== undefined); if (!pts.length) return;
+  const c = $('pkMap'), W = c.clientWidth || innerWidth, H = c.clientHeight || innerHeight;
+  for (let z = 18; z >= 3; z--) {
+    const xy = pts.map(s => worldPx(s.lat, s.lon, z)), xs = xy.map(p => p[0]), ys = xy.map(p => p[1]);
+    const x1 = Math.min(...xs), x2 = Math.max(...xs), y1 = Math.min(...ys), y2 = Math.max(...ys);
+    if (x2 - x1 <= W - 2 * (MK_R + 30) && y2 - y1 <= H - 230 || z === 3) { pk.z = z; pk.cx = (x1 + x2) / 2; pk.cy = (y1 + y2) / 2 + 30; return; }
+  }
+}
+$('bMapAll').onclick = () => pickOnMap({ mode: 'all' });
+
+// ===== Photo viewer =====
+const vw = { it: null, url: null, fromMap: false, x0: null };
+async function openViewer(it, fromMap) {
+  vw.fromMap = !!fromMap;
+  $('vw').hidden = false;
+  await vwShow(it);
+}
+async function vwShow(it) {
+  vw.it = it;
+  const i = shots.indexOf(it), st = $('vwStage');
+  $('vwPrev').disabled = i <= 0; $('vwNext').disabled = i >= shots.length - 1;
+  const k = $('crs').value, geo = it.lat !== undefined, [E, N] = geo ? project(k, it.lat, it.lon) : [0, 0];
+  $('vwInfo').innerHTML = `<b>№${i + 1} · ${esc(it.date || '')} ${esc(it.time || '')}</b> · ${it.kind === 'video' ? 'видео' : 'фото'}${it.dir !== undefined ? ' · ' + esc(dirText(it.dir)) : ''}` +
+    `<br>${geo ? `${it.lat.toFixed(7)}, ${it.lon.toFixed(7)}${crsFits(k, it.lon) ? ` · X ${E.toFixed(3)} Y ${N.toFixed(3)}` : ''}` : 'координат жоқ'}<br><span style="opacity:.75">${esc(it.name)}</span>`;
+  $('vwMap').hidden = $('vwG').hidden = !geo;
+  if (geo) $('vwG').href = `https://www.google.com/maps/search/?api=1&query=${it.lat.toFixed(7)},${it.lon.toFixed(7)}`;
+  if (vw.url) { URL.revokeObjectURL(vw.url); vw.url = null; }
+  st.textContent = '';
+  if (it.thumb) { const t = document.createElement('img'); t.src = it.thumb; t.alt = ''; t.style.cssText = 'width:100%;height:100%;object-fit:contain;filter:blur(6px);opacity:.6'; st.appendChild(t); }   // until the file is read
+  const b = it.blob || await getFile(it.name);
+  if (vw.it !== it || $('vw').hidden) return;
+  st.textContent = '';
+  if (!b) { const p = document.createElement('div'); p.className = 'hud'; p.textContent = 'Бұл файлдың көшірмесі қосымшада жоқ — телефонның Downloads папкасынан қараңыз.'; st.appendChild(p); return; }
+  vw.url = URL.createObjectURL(b);
+  const m = document.createElement(it.kind === 'video' ? 'video' : 'img');
+  if (it.kind === 'video') { m.controls = true; m.playsInline = true; } else m.alt = it.name;
+  m.src = vw.url; st.appendChild(m);
+}
+function vwStep(d) { const i = shots.indexOf(vw.it) + d; if (i >= 0 && i < shots.length) vwShow(shots[i]); }
+function closeViewer() {
+  $('vw').hidden = true; $('vwStage').textContent = '';
+  if (vw.url) { URL.revokeObjectURL(vw.url); vw.url = null; }
+  vw.it = null;
+}
+(() => {
+  $('vwClose').onclick = closeViewer;
+  $('vwPrev').onclick = () => vwStep(-1); $('vwNext').onclick = () => vwStep(1);
+  $('vwShare').onclick = () => vw.it && share(vw.it);
+  $('vwSave').onclick = () => vw.it && save(vw.it);
+  $('vwMap').onclick = () => {
+    const it = vw.it; if (!it || it.lat === undefined) return;
+    closeViewer();
+    if ($('pk').hidden || pk.mode !== 'all') pickOnMap({ mode: 'all', lat: it.lat, lon: it.lon });
+    else { pk.z = Math.max(pk.z, 18); [pk.cx, pk.cy] = worldPx(it.lat, it.lon, pk.z); pkDraw(); }
+  };
+  const st = $('vwStage');   // swipe left / right = next / previous
+  st.addEventListener('pointerdown', e => { if (e.target.tagName !== 'VIDEO') vw.x0 = [e.clientX, e.clientY]; });
+  st.addEventListener('pointerup', e => {
+    if (!vw.x0) return; const dx = e.clientX - vw.x0[0], dy = e.clientY - vw.x0[1]; vw.x0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) vwStep(dx < 0 ? 1 : -1);
+  });
+  st.addEventListener('pointercancel', () => { vw.x0 = null; });
 })();
 
 // ===== Files from the phone's gallery: read their EXIF place; the rest get a place on the map =====
@@ -1571,15 +1718,18 @@ function kmlGeom(it) {
   const a = it.dir / RHO, la2 = it.lat + VEC_M * Math.cos(a) / 110574, lo2 = it.lon + VEC_M * Math.sin(a) / (111320 * Math.cos(it.lat / RHO));
   return `<MultiGeometry><Point><coordinates>${p}</coordinates></Point><LineString><tessellate>1</tessellate><coordinates>${p} ${lo2.toFixed(7)},${la2.toFixed(7)},0</coordinates></LineString></MultiGeometry>`;
 }
-function kmlFor(list, title) {
+// media (KMZ only): file name -> { img, icon } paths inside the KMZ; the photo's own thumbnail becomes its map icon
+function kmlFor(list, title, media) {
   const k = $('crs').value, x = s => esc(s);
   const marks = list.map(it => {
-    const u = encodeURIComponent(it.name), [E, N] = project(k, it.lat, it.lon);
-    return `<Placemark><name>${x(it.time)}</name><styleUrl>#${it.kind === 'video' ? 'VIDEO' : 'FOTO'}</styleUrl><description><![CDATA[<div style="font-family:Segoe UI,Arial,sans-serif;font-size:13px;width:660px">` +
-      (it.kind === 'photo' ? `<img src="${u}" width="640">` : '') +
+    const u = encodeURIComponent(it.name), [E, N] = project(k, it.lat, it.lon), md = media && media[it.name];
+    const img = md ? (md.img ? `<img src="${md.img}" width="640">` : '') : it.kind === 'photo' ? `<img src="${u}" width="640">` : '';
+    const style = md && md.icon ? `<Style><IconStyle><scale>1.8</scale><Icon><href>${md.icon}</href></Icon></IconStyle><LabelStyle><scale>0.8</scale></LabelStyle><LineStyle><color>ff00d6ff</color><width>3</width></LineStyle></Style>`
+      : `<styleUrl>#${it.kind === 'video' ? 'VIDEO' : 'FOTO'}</styleUrl>`;
+    return `<Placemark><name>${media ? `№${shots.indexOf(it) + 1} ` : ''}${x(it.time)}</name>${style}<description><![CDATA[<div style="font-family:Segoe UI,Arial,sans-serif;font-size:13px;max-width:660px">` + img +
       `<p><b>${x(it.name)}</b><br>${it.date} ${it.time}<br>WGS-84: ${it.lat.toFixed(7)}, ${it.lon.toFixed(7)}${it.acc ? ` (±${it.acc.toFixed(1)} м)` : ''}` +
       (crsFits(k, it.lon) ? `<br>${x(crsName(k))} (AutoCAD X, Y): ${E.toFixed(3)}, ${N.toFixed(3)}` : '') + (it.dir !== undefined ? `<br>Бағыт: ${dirText(it.dir)}` : '') +
-      `</p><p><a href="${u}">▶ Түпнұсқа файлды ашу</a></p></div>]]></description>` + kmlGeom(it) + '</Placemark>';
+      `</p>${media ? '' : `<p><a href="${u}">▶ Түпнұсқа файлды ашу</a></p>`}</div>]]></description>` + kmlGeom(it) + '</Placemark>';
   }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${x(title)}</name>` +
     '<Style id="FOTO"><IconStyle><color>ffeb6f1f</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/camera.png</href></Icon></IconStyle><LineStyle><color>ff00d6ff</color><width>3</width></LineStyle></Style>' +
@@ -1608,7 +1758,7 @@ function fillZipDays() {
   grp('Таңдау', [[`Өзім белгілеймін${picked.size ? ` · ${picked.size} файл` : ''}`, 'pick']]);
   const vals = [...sel.options].map(o => o.value);
   sel.value = vals.includes(keep) ? keep : vals[0];
-  $('bZip').disabled = !shots.length;
+  $('bZip').disabled = $('bKmz').disabled = !shots.length;
 }
 function zipChoice() {
   const v = $('zipDay').value || '', today = new Date(), d0 = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
@@ -1637,6 +1787,45 @@ async function makeDayZip() {
   } catch (e) { say('ZIP жасалмады: ' + e.message, 'err'); }
   $('bZip').disabled = false;
 }
+// ===== Google Earth: one .kmz with the photos inside (thumbnail = map icon, tap = the photo) =====
+async function scaleJpeg(blob, max, square) {
+  const bm = await createImageBitmap(blob).catch(() => null); if (!bm) return null;
+  let sx = 0, sy = 0, sw = bm.width, sh = bm.height;
+  if (square) { const m = Math.min(sw, sh); sx = (sw - m) / 2; sy = (sh - m) / 2; sw = sh = m; }
+  const s = Math.min(1, max / Math.max(sw, sh)), c = document.createElement('canvas');
+  c.width = Math.round(sw * s); c.height = Math.round(sh * s);
+  c.getContext('2d').drawImage(bm, sx, sy, sw, sh, 0, 0, c.width, c.height); bm.close();
+  const out = await new Promise(r => c.toBlob(r, 'image/jpeg', square ? 0.8 : 0.85)); c.width = c.height = 0;
+  return out;
+}
+async function makeKmz() {
+  const { list, title } = zipChoice(), geo = list.filter(s => s.lat !== undefined);
+  if (!geo.length) { say(list.length ? 'Бұл таңдаудағы файлдарда координат жоқ — алдымен «Орнын қою».' : ($('zipDay').value === 'pick' ? 'Тізімнен файлдарды белгілеңіз.' : 'Бұл таңдауда файл жоқ.'), 'warn'); return; }
+  $('bKmz').disabled = true;
+  try {
+    const files = [], media = {};
+    for (const [i, it] of geo.entries()) {
+      say(`KMZ жиналуда… ${i + 1}/${geo.length}`);
+      const id = `files/${String(i + 1).padStart(3, '0')}`, m = media[it.name] = {};
+      const b = it.kind === 'photo' ? it.blob || await getFile(it.name) : null;
+      const big = b && await scaleJpeg(b, 1600), ic = b && await scaleJpeg(b, 96, true);
+      if (big) { files.push({ name: id + '.jpg', blob: big }); m.img = id + '.jpg'; }
+      if (ic) { files.push({ name: id + '_i.jpg', blob: ic }); m.icon = id + '_i.jpg'; }
+      else if (it.thumb) { files.push({ name: id + '_i.jpg', blob: await (await fetch(it.thumb)).blob() }); m.icon = id + '_i.jpg'; }
+    }
+    // doc.kml first: Google Earth opens the first .kml in the archive
+    const zip = await makeZip([{ name: 'doc.kml', blob: new Blob([kmlFor(geo, title, media)], { type: 'application/vnd.google-earth.kml+xml' }) }, ...files]);
+    const name = title + '.kmz', f = new File([zip], name, { type: 'application/vnd.google-earth.kmz' });
+    let shared = false;
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: name }); shared = true; } catch (e) {} }
+    if (!shared) download(zip, name);
+    const skipped = list.length - geo.length;
+    say(`${name} (${(zip.size / 1048576).toFixed(1)} МБ, ${geo.length} нүкте) ${shared ? 'жіберілді' : 'Downloads папкасына сақталды'}. Google Earth-те ашыңыз: картада фото иконкалары, басқанда фото көрінеді.` +
+      (skipped ? ` Координатсыз ${skipped} файл кірмеді.` : ''), skipped ? 'warn' : 'ok');
+  } catch (e) { say('KMZ жасалмады: ' + e.message, 'err'); }
+  $('bKmz').disabled = false;
+}
+$('bKmz').onclick = makeKmz;
 let pressT = 0;
 function sysPhoto() { pressT = Date.now(); $('inPhoto').click(); }
 $('bPhoto').onclick = () => { if ($('sysCam').checked || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) sysPhoto(); else openCam(); };
@@ -1703,7 +1892,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
 renderList();
 startGps();
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});   // ask Android not to evict the copies
-window.GK = { buildExif, replaceExif, readExifBasic, tagVideo, project, invProject, onFix, handlePhoto, handleVideo, fileName, renameFor, objOf, parseSP, makeZip, kmlFor, csvFor, CRS, stampLines, importFile, rewriteShot, pickOnMap, pk, shots: () => shots };
+window.GK = { buildExif, replaceExif, readExifBasic, tagVideo, project, invProject, onFix, handlePhoto, handleVideo, fileName, renameFor, objOf, parseSP, makeZip, kmlFor, csvFor, CRS, stampLines, importFile, rewriteShot, pickOnMap, pk, openViewer, closeViewer, makeKmz, scaleJpeg, shots: () => shots };
 </script>
 </body>
 </html>
