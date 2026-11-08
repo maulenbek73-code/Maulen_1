@@ -145,6 +145,7 @@ details li{margin:4px 0}
     <label class="chk"><input type="checkbox" id="mapStamp" checked> Фото бұрышына карта мен түсіру бағытын салу</label>
     <label class="chk"><input type="checkbox" id="sysCam"> Телефонның өз камерасын қолдану (компас пен бағыт жазылмайды)</label>
     <label class="chk"><input type="checkbox" id="hiRes"> Толық ажыратымдылық (баяу: кейбір телефонда кадр 1–3 с кешігеді)</label>
+    <label class="chk"><input type="checkbox" id="liteVid"> Жеңіл видео (әлсіз телефонға: 480p, 24 кадр/с — үзілмей жазылады)</label>
     <div class="row">
       <label for="decl" style="margin:0;flex:1">Магниттік ауытқу, ° (Шымкент ≈ 6)</label>
       <input type="text" id="decl" value="6" inputmode="decimal" style="width:80px">
@@ -731,25 +732,45 @@ function iso6709(lat, lon, alt) {
   const f = (x, w) => (x < 0 ? '-' : '+') + Math.abs(x).toFixed(6).padStart(w, '0');
   return f(lat, 9) + f(lon, 10) + (alt !== null && alt !== undefined && isFinite(alt) ? (alt < 0 ? '-' : '+') + Math.abs(alt).toFixed(1) : '') + '/';
 }
-async function tagVideo(file, lat, lon, alt) {
-  const tops = await topBoxes(file), moov = tops.find(b => b.type === 'moov');
-  if (!moov || moov.size > 200e6 || tops.some(b => b.type === 'moof')) return null;   // fragmented MP4: offsets cannot be shifted safely
-  const mb = new Uint8Array(await file.slice(moov.off, moov.off + moov.size).arrayBuffer());
-  const s = iso6709(lat, lon, alt), payload = new Uint8Array(4 + s.length);
+// QuickTime text item: [length][language][ASCII text]
+function qtText(type, s) {
+  const payload = new Uint8Array(4 + s.length);
   new DataView(payload.buffer).setUint16(0, s.length); new DataView(payload.buffer).setUint16(2, 0x15C7);
   for (let i = 0; i < s.length; i++) payload[4 + i] = s.charCodeAt(i);
-  const xyz = mkBox('\xA9xyz', payload);
+  return mkBox(type, payload);
+}
+// dir: the shooting direction goes into udta/©cmt as "GeoFoto A125" (AutoCAD GEOFOTO reads it)
+async function tagVideo(file, lat, lon, alt, dir) {
+  const tops = await topBoxes(file), moov = tops.find(b => b.type === 'moov');
+  if (!moov || moov.size > 200e6) return null;
+  const xyz = qtText('\xA9xyz', iso6709(lat, lon, alt));
+  const cmt = dir !== undefined && dir !== null ? [qtText('\xA9cmt', `GeoFoto A${Math.round(dir) % 360}`)] : [];
+  if (tops.some(b => b.type === 'moof')) {
+    // fragmented MP4 (recorded in the app): nothing may move, so the place goes into an extra top-level udta box
+    // just before mfra (whose offsets point backwards) or at the end. Players skip it; AutoCAD GEOFOTO reads it.
+    // (an older top-level udta of ours, always after the fragments, is replaced)
+    const box = mkBox('udta', xyz, ...cmt), parts = [];
+    let put = false;
+    for (const b of tops) {
+      if (b.type === 'udta' && b.off > moov.off) continue;
+      if (b.type === 'mfra' && !put) { parts.push(box); put = true; }
+      parts.push(file.slice(b.off, b.off + b.size));
+    }
+    if (!put) parts.push(box);
+    return new Blob(parts, { type: file.type || 'video/mp4' });
+  }
+  const mb = new Uint8Array(await file.slice(moov.off, moov.off + moov.size).arrayBuffer());
   const kids = boxes(mb, moov.hdr, mb.length), parts = [];
   let hadUdta = false;
   for (const k of kids) {
     const raw = mb.subarray(k.off, k.off + k.size);
     if (k.type === 'udta') {
       hadUdta = true;
-      const inner = boxes(mb, k.off + k.hdr, k.off + k.size).filter(c => c.type !== '\xA9xyz').map(c => mb.subarray(c.off, c.off + c.size));
-      parts.push(mkBox('udta', xyz, ...inner));
+      const inner = boxes(mb, k.off + k.hdr, k.off + k.size).filter(c => c.type !== '\xA9xyz' && !(cmt.length && c.type === '\xA9cmt')).map(c => mb.subarray(c.off, c.off + c.size));
+      parts.push(mkBox('udta', xyz, ...cmt, ...inner));
     } else parts.push(raw);
   }
-  if (!hadUdta) parts.push(mkBox('udta', xyz));
+  if (!hadUdta) parts.push(mkBox('udta', xyz, ...cmt));
   const nm = mkBox('moov', ...parts), delta = nm.length - moov.size;
   // moov before the media data: shift every chunk offset by the size change
   if (delta && tops.some(b => b.type === 'mdat' && b.off > moov.off)) {
@@ -949,7 +970,8 @@ async function startStream() {
   if (camStream) camStream.getTracks().forEach(t => t.stop());
   camStream = null;
   const video = camMode === 'video'
-    ? { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }
+    ? (lite() ? { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } }
+      : { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } })
     : $('hiRes').checked ? { facingMode: { ideal: 'environment' }, width: { ideal: 4096 }, height: { ideal: 4096 } }
     // a light preview: smooth on weak phones, and this frame IS the photo (≈3 MP)
     : { facingMode: { ideal: 'environment' }, width: { ideal: 2048 }, height: { ideal: 1536 }, frameRate: { ideal: 30 } };
@@ -1004,7 +1026,8 @@ async function recOverlay() {
   if (!rec || rec.ovBusy) return;
   rec.ovBusy = true;
   try {
-    const { w, h } = rec, tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h;
+    const { w, h } = rec, tmp = rec.tmp || (rec.tmp = document.createElement('canvas'));   // one reused canvas
+    tmp.width = w; tmp.height = h;
     const g = tmp.getContext('2d'), now = new Date(), dir = trueDir();
     if (rec.dir0 === null && dir !== null) rec.dir0 = dir;   // compass woke up after the start: use its first value for the file name
     if (last) {
@@ -1013,34 +1036,49 @@ async function recOverlay() {
       if ($('mapStamp').checked) { const r = Math.round(Math.min(w, h) * 0.17), m = Math.round(r * 0.35); await drawInset(g, w - r - m, r + m, r, last.lat, last.lon, dir, 150); }
     } else drawBand(g, w, h, [`${now.toLocaleString('kk-KZ')}   GPS іздеуде…`]);
     if (rec) { rec.og.clearRect(0, 0, w, h); rec.og.drawImage(tmp, 0, 0); }
-    tmp.width = tmp.height = 0;
   } catch (e) {}
   if (rec) rec.ovBusy = false;
 }
+const lite = () => $('liteVid').checked;
 async function startRec() {
-  const v = $('camVideo'), vw = v.videoWidth, vh = v.videoHeight;
-  if (!camStream || !vw || !vh) { camMsg('Камера әлі дайын емес'); return; }
+  const v = $('camVideo');
+  if (!camStream || !v.videoWidth || !v.videoHeight) { camMsg('Камера әлі дайын емес'); return; }
+  // the first frames must already carry the coordinates: wait for a fresh GPS fix (up to 20 s)
+  const fresh = () => last && Date.now() - last.t < 10000;
+  if (!fresh()) {
+    const end = Date.now() + 20000;
+    while (!fresh() && Date.now() < end && camStream) {
+      camMsg(`GPS күтілуде… ${Math.ceil((end - Date.now()) / 1000)} с — координат видеоның бірінші кадрынан жазылуы үшін`);
+      await new Promise(r => setTimeout(r, 500));
+    }
+    if (!camStream) return;
+    if (!fresh()) camMsg('GPS табылмады — видео координатсыз басталды, кейін «Орнын қою» басыңыз');
+  }
+  const vw = v.videoWidth, vh = v.videoHeight;
   const t0 = Date.now(), dir0 = trueDir(), turn = (360 - upAngle()) % 360, side = turn % 180 !== 0;
-  const sc = Math.min(1, 1280 / Math.max(vw, vh));   // 720p: smooth on most phones
+  const sc = Math.min(1, (lite() ? 854 : 1280) / Math.max(vw, vh));   // light: 480p for weak phones, else 720p
   const w = Math.round((side ? vh : vw) * sc / 2) * 2, h = Math.round((side ? vw : vh) * sc / 2) * 2;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const ov = document.createElement('canvas'); ov.width = w; ov.height = h;
-  const stream = c.captureStream(30);
+  const stream = c.captureStream(lite() ? 24 : 30);
   camStream.getAudioTracks().forEach(t => stream.addTrack(t));
-  const mime = recMime();
+  const mime = recMime(), bps = lite() ? 2e6 : 5e6;
   let mr;
-  try { mr = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 5e6 } : { videoBitsPerSecond: 5e6 }); }
+  try { mr = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: bps } : { videoBitsPerSecond: bps }); }
   catch (e) { camMsg('Видео жазу басталмады: ' + e.message); return; }
-  rec = { mr, chunks: [], c, g: c.getContext('2d'), og: ov.getContext('2d'), ov, w, h, t0, dir0, turn, side, fix0: last && t0 - last.t < 5000 ? last : null };
+  rec = { mr, chunks: [], c, g: c.getContext('2d', { alpha: false }), og: ov.getContext('2d'), ov, w, h, t0, dir0, turn, side, fix0: last && t0 - last.t < 10000 ? last : null };
+  // draw only when the camera has a NEW frame (requestVideoFrameCallback), not on every screen refresh
+  const rvfc = typeof v.requestVideoFrameCallback === 'function';
   const draw = () => {
     if (!rec) return;
     const { g } = rec, dw = side ? h : w, dh = side ? w : h;
-    g.save(); g.translate(w / 2, h / 2); g.rotate(turn / RHO); g.drawImage(v, -dw / 2, -dh / 2, dw, dh); g.restore();
+    if (turn) { g.save(); g.translate(w / 2, h / 2); g.rotate(turn / RHO); g.drawImage(v, -dw / 2, -dh / 2, dw, dh); g.restore(); }
+    else g.drawImage(v, 0, 0, w, h);
     g.drawImage(ov, 0, 0);
-    rec.raf = requestAnimationFrame(draw);
+    if (rvfc) rec.vfc = v.requestVideoFrameCallback(draw); else rec.raf = requestAnimationFrame(draw);
   };
   await recOverlay(); draw();
-  rec.ovTimer = setInterval(recOverlay, 500);
+  rec.ovTimer = setInterval(recOverlay, lite() ? 1000 : 500);
   rec.clock = setInterval(() => {
     const s = Math.floor((Date.now() - t0) / 1000);
     $('camRec').hidden = false; $('camRec').textContent = `● ЖАЗУ ${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
@@ -1057,6 +1095,7 @@ function stopRec() {
   $('shutter').disabled = true; camMsg('Видео сақталуда…');
   r.mr.onstop = async () => {
     clearInterval(r.ovTimer); clearInterval(r.clock); cancelAnimationFrame(r.raf);
+    if (r.vfc && $('camVideo').cancelVideoFrameCallback) $('camVideo').cancelVideoFrameCallback(r.vfc);
     let thumb = null;
     try { const tc = document.createElement('canvas'); tc.width = 96; tc.height = Math.round(96 * r.h / r.w); tc.getContext('2d').drawImage(r.c, 0, 0, tc.width, tc.height); thumb = tc.toDataURL('image/jpeg', 0.7); } catch (e) {}
     const type = (r.mr.mimeType || recMime() || 'video/webm').split(';')[0], ext = type.includes('mp4') ? 'mp4' : 'webm';
@@ -1286,9 +1325,10 @@ async function handleVideo(file, when, fix) {
   const ext = (file.name.match(/\.(\w+)$/) || [, 'mp4'])[1].toLowerCase();
   let out = file, note = staleNote(fix);
   if (!fix) note = 'GPS болмады — координатсыз сақталды';
-  else if (file.name.startsWith('rec.')) {}   // recorded in the app: coordinates are in the file name and on every frame
-  else {
-    try { const t = await tagVideo(file, fix.lat, fix.lon, fix.alt); if (t) out = t; else note = 'Видео метадерегіне жазылмады, координат файл атында'; }
+  else if (file.name.startsWith('rec.')) {   // recorded in the app: on every frame and in the name; MP4 also gets the metadata box
+    if (/\.mp4$/i.test(file.name)) try { const t = await tagVideo(file, fix.lat, fix.lon, fix.alt, fix.dir); if (t) out = t; } catch (e) {}
+  } else {
+    try { const t = await tagVideo(file, fix.lat, fix.lon, fix.alt, fix.dir); if (t) out = t; else note = 'Видео метадерегіне жазылмады, координат файл атында'; }
     catch (e) { note = 'Видео метадерегіне жазылмады, координат файл атында'; }
   }
   return { blob: out, name: fileName('VID', when, fix, ext), kind: 'video', fix, note };
@@ -1455,11 +1495,13 @@ async function rewriteShot(it, fix, what) {
     }
     try { out = replaceExif(u, buildExif({ ...fix, when, make: ex.make, model: ex.model, orientation })); }
     catch (e) { note = 'EXIF жазылмады: ' + e.message + '. Координат файл атында.'; }
-  } else if (what === 'dir') {
-    note = 'Видео кадрындағы жазу өзгермейді, бағыт файл атына жазылды. Келесі видеода бағытты түсірер алдында камерадағы «Бағытты картадан көрсету» арқылы қойыңыз.';
-  } else if (what === 'place') {
-    try { const t = await tagVideo(new File([old], it.name, { type: old.type || 'video/mp4' }), fix.lat, fix.lon, fix.alt); if (t) out = t; else note = 'Видео метадерегіне жазылмады, координат файл атында.'; }
-    catch (e) { note = 'Видео метадерегіне жазылмады, координат файл атында.'; }
+  } else {   // video: coordinates + direction into the MP4 metadata (the picture itself cannot be re-drawn)
+    let t = null;
+    try { t = await tagVideo(new File([old], it.name, { type: old.type || 'video/mp4' }), fix.lat, fix.lon, fix.alt, fix.dir); } catch (e) {}
+    if (t) out = t;
+    note = what === 'dir'
+      ? `Бағыт файл атына${t ? ' және видео метадерегіне' : ''} жазылды (кадрдағы жазу өзгермейді). Келесі видеода бағытты түсірер алдында камерадағы «Бағытты картадан көрсету» арқылы қойыңыз.`
+      : t ? '' : 'Видео метадерегіне жазылмады, координат файл атында.';
   }
   const oldName = it.name, name = renameFor(oldName, fix);
   if (name !== oldName && shots.some(s => s !== it && s.name === name)) { say('Осындай атты файл тізімде бар.', 'warn'); return; }
@@ -1956,15 +1998,26 @@ async function makeKmz() {
   $('bKmz').disabled = false;
 }
 $('bKmz').onclick = makeKmz;
-let pressT = 0;
-function sysPhoto() { pressT = Date.now(); $('inPhoto').click(); }
+let pressT = 0, preFix = null;
+// The phone's own camera knows nothing about our GPS / direction: remember them at the moment it is opened.
+// A video gets the place where it STARTED and this direction; a photo gets a fresh fix and this direction.
+function grabPre() {
+  const d = trueDir();
+  preFix = last && Date.now() - last.t < 30000 ? { ...last, dir: d === null ? undefined : d, at: Date.now() } : null;
+}
+function sysPhoto() { pressT = Date.now(); grabPre(); $('inPhoto').click(); }
 $('bPhoto').onclick = () => { if ($('sysCam').checked || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) sysPhoto(); else openCam(); };
-function sysVideo() { pressT = Date.now(); $('inVideo').click(); }
+function sysVideo() { pressT = Date.now(); grabPre(); $('inVideo').click(); }
 $('bVideo').onclick = () => { if ($('sysCam').checked || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) || !canRecord()) sysVideo(); else openCam('video'); };
 $('shutter').onclick = shoot;
 $('camAim').onclick = camAim;
 $('camClose').onclick = closeCam;
-$('camSys').onclick = () => { const m = camMode; closeCam(); if (m === 'video') sysVideo(); else sysPhoto(); };
+$('camSys').onclick = () => {
+  if (noCompass() && !manualOk()) {   // no compass: take the direction first, so the phone's camera file gets it too
+    camMsg('Алдымен бағытты картадан көрсетіңіз, сосын «Жүйелік камера» басыңыз'); camAim(); return;
+  }
+  const m = camMode; closeCam(); if (m === 'video') sysVideo(); else sysPhoto();
+};
 $('mPhoto').onclick = () => setCamMode('photo');
 $('mVideo').onclick = () => setCamMode('video');
 $('bZip').onclick = makeDayZip;
@@ -1994,7 +2047,13 @@ for (const [id, fn] of [['inPhoto', handlePhoto], ['inVideo', handleVideo]]) {
     const lm = file.lastModified, now = new Date(lm && lm >= pressT - 5000 && lm <= returnT + 5000 ? lm : returnT);
     say('GPS жаңартылуда…');
     try {
-      const fix = await freshFix(returnT);
+      const pre = preFix && returnT - preFix.at < 3600000 ? preFix : null; preFix = null;
+      let fix;
+      if (fn === handleVideo && pre) fix = pre;   // video: the place where filming started
+      else {
+        fix = await freshFix(returnT);
+        if (fix && pre && pre.dir !== undefined && distM(pre, fix) < 30) fix = { ...fix, dir: pre.dir };
+      }
       say('Координат жазылуда…');
       const it = await processShot(fn, file, now, fix);
       say(it.note ? it.note : `Сақталды: ${it.name}`, it.note ? 'warn' : 'ok');
@@ -2016,9 +2075,12 @@ try {
   if (s.crs && CRS[s.crs]) $('crs').value = s.crs; if (s.obj) $('obj').value = s.obj; if (s.stamp === false) $('stamp').checked = false;
   if (s.mapStamp === false) $('mapStamp').checked = false; if (s.sysCam) $('sysCam').checked = true; if (s.decl !== undefined) $('decl').value = s.decl;
   if (s.hiRes) $('hiRes').checked = true;
+  // light video: as saved, otherwise on by default for weak phones (≤ 4 cores or ≤ 3 GB memory)
+  $('liteVid').checked = s.liteVid !== undefined ? !!s.liteVid
+    : (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3;
 } catch (e) {}
-function persist() { try { localStorage.setItem(KEY, JSON.stringify({ crs: $('crs').value, obj: $('obj').value, stamp: $('stamp').checked, mapStamp: $('mapStamp').checked, sysCam: $('sysCam').checked, hiRes: $('hiRes').checked, decl: $('decl').value })); } catch (e) {} }
-for (const id of ['crs', 'obj', 'stamp', 'mapStamp', 'sysCam', 'hiRes', 'decl']) $(id).addEventListener('change', () => { persist(); showGps(); });
+function persist() { try { localStorage.setItem(KEY, JSON.stringify({ crs: $('crs').value, obj: $('obj').value, stamp: $('stamp').checked, mapStamp: $('mapStamp').checked, sysCam: $('sysCam').checked, hiRes: $('hiRes').checked, liteVid: $('liteVid').checked, decl: $('decl').value })); } catch (e) {} }
+for (const id of ['crs', 'obj', 'stamp', 'mapStamp', 'sysCam', 'hiRes', 'liteVid', 'decl']) $(id).addEventListener('change', () => { persist(); showGps(); });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 renderList();
