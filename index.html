@@ -45,6 +45,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
 .btn:disabled{opacity:.5}
 .chk{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--text);text-transform:none;letter-spacing:0;margin:0}
+#toast{position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;background:rgba(20,20,20,.92);color:#fff;font:600 14px var(--sans);padding:10px 16px;border-radius:999px;max-width:90vw;text-align:center}
 /* Фото/видео қосу жолағы - әрдайым экранның төменгі жағында */
 body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 #addBar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--card);border-top:1px solid var(--line);box-shadow:0 -4px 14px rgba(0,0,0,.12);
@@ -255,6 +256,7 @@ body.pc .thw,body.pc .item img,body.pc .item .ph{width:96px;height:96px}
       <button class="btn primary" id="bZip">Компьютерге (ZIP)</button>
       <button class="btn" id="bKmz" title="Google Earth үшін бір файл: картада фото иконкалары, басқанда фото ашылады">Google Earth (KMZ)</button>
       <button class="btn" id="bSaveDir" title="Таңдаудағы файлдарды (координатымен) компьютердегі папкаға жазу" hidden>Папкаға сақтау</button>
+      <span class="meta" id="dirName" hidden></span>
     </div>
     <div class="row" id="pickRow" style="margin-bottom:12px" hidden>
       <button class="btn" id="bPickAll">Барлығын белгілеу</button>
@@ -276,7 +278,7 @@ body.pc .thw,body.pc .item img,body.pc .item .ph{width:96px;height:96px}
         <li><b>Компьютерге жіберу</b>: ZIP-ке не кіретінін таңдаңыз — <b>күн</b>, <b>нысан</b> (файл атындағы нысан аты) немесе <b>«Өзім белгілеймін»</b> (тізімде галочка қоясыз). «Компьютерге (ZIP)» оларды бір ZIP файлға жинайды (Downloads). Telegram → 📎 → <b>Файл</b> → Downloads → ZIP → «Избранное». Компьютерде AutoCAD → <b>GEOFOTO</b> → осы ZIP-ті таңдаңыз: ашады, сызбаға қояды, Google Earth файлын жасайды.</li>
         <li><b>Компасы жоқ телефон</b>: түсіріп болған соң тізімдегі <b>«Бағыт»</b> батырмасын басыңыз — карта ашылады, фото қай жаққа қарап түсірілгенін картадан нұқып көрсетесіз (немесе азимутты санмен жазасыз). Бағыт EXIF-ке, файл атына (<code>_A125</code>), KML-ге (сары сызық) және AutoCAD-тағы жебеге түседі.</li>
         <li><b>Фото/видео қосу</b> жолағы әрдайым экранның төменгі жағында: <b>Галерея</b> (Google Фото), <b>Файлдар</b> (файл менеджері — ішкі жады, SD карта, Downloads, DCIM), <b>Папка</b> (папкадағы барлық фото/видео).</li>
-        <li><b>Компьютер нұсқасы</b>: <a href="https://maulenbek73-code.github.io/Maulen_1/" target="_blank" rel="noopener">maulenbek73-code.github.io/Maulen_1</a> — осы бетті компьютерде Chrome / Edge-те ашыңыз (мекенжай жолындағы «Орнату» белгісі — бөлек қосымша болып орнатылады). «Файлдарды таңдау» / «Папканы таңдау» немесе файлдарды бетке сүйреп әкеліңіз. <b>«Координатсыздарға бір орын»</b> — координаты жоқ барлық фотоға картадан бір орын; әрқайсысына бөлек — «Орнын қою». Орны қойылған фотоның бетіне координат (және бұрышына карта) жазылады. Тізімде координаты барлар <b>жасыл</b>, жоқтар <b>қызғылт сары</b> белгімен тұрады. Сосын <b>«Папкаға сақтау»</b> (координат EXIF-те және файл атында + GeoFoto.kml, GeoFoto.csv) немесе ZIP.</li>
+        <li><b>Компьютер нұсқасы</b>: <a href="https://maulenbek73-code.github.io/Maulen_1/" target="_blank" rel="noopener">maulenbek73-code.github.io/Maulen_1</a> — осы бетті компьютерде Chrome / Edge-те ашыңыз (мекенжай жолындағы «Орнату» белгісі — бөлек қосымша болып орнатылады). «Файлдарды таңдау» / «Папканы таңдау» немесе файлдарды бетке сүйреп әкеліңіз. <b>«Координатсыздарға бір орын»</b> — координаты жоқ барлық фотоға картадан бір орын; әрқайсысына бөлек — «Орнын қою». Орны қойылған фотоның <b>астына</b> координат пен карта жолағы қосылады — фотоның өзі ешбір жерінен жабылмайды. Тізімде координаты барлар <b>жасыл</b>, жоқтар <b>қызғылт сары</b> белгімен тұрады. Координаты жазылған файлдар алдымен қосымшаның ішінде тұрады; компьютерге <b>«Папкаға сақтау»</b> арқылы түседі — папка бір рет таңдалады (тізім үстінде «Папка: ...» жазылады), кейін орны өзгертілген әр файл сол папкаға өзі жазылады. Сосын <b>«Папкаға сақтау»</b> (координат EXIF-те және файл атында + GeoFoto.kml, GeoFoto.csv) немесе ZIP.</li>
         <li><b>Басқа фотоларға координат</b>: «Галерея» / «Файлдар» / «Папка» — бірнеше файл таңдаңыз. EXIF-інде координаты бар фото бірден тізімге түседі; жоқтарына <b>«Орны»</b> басып картадан (немесе координатты жазып) орнын қоясыз — координат EXIF-ке жазылады, файл аты GEOFOTO оқитын түрге келеді. Сосын «Сақтау» немесе ZIP.</li>
         <li><b>Жеке фотоны бөлісу</b>: «Бөлісу» — фото ретінде (Telegram / WhatsApp сығып, EXIF-ті өшіреді, координат тек суреттің бетінде және атында қалады). <b>«EXIF-пен бөлісу»</b> — файл (құжат) ретінде, координат EXIF-те сақталады. Телефон мұны қолдамаса, фото Downloads-қа сақталады: Telegram → 📎 → Файл, WhatsApp → 📎 → Документ арқылы жіберіңіз.</li>
         <li>Компас дұрыс көрсетпесе, телефонды ауада «8» санын сызып бірнеше рет айналдырыңыз (калибрлеу). Темір, машина, электр сымдарының жанында компас қателеседі.</li>
@@ -1354,6 +1356,26 @@ async function stampCanvas(g, w, h, fix, when, re) {
     await drawInset(g, w - r - m, r + m, r, fix.lat, fix.lon, fix.dir, 2500);
   }
 }
+// фото + оның астына қосылған жолақ (координат, уақыт, карта); фотоның пиксельдері өзгермейді
+async function stampBelow(bm, fix, when) {
+  const w = bm.width, h = bm.height, lines = stampLines(fix, when);
+  const fs = Math.max(14, Math.round(Math.min(w, h) / 30)), lh = fs * 1.35, padd = fs * 0.7;
+  const withMap = $('mapStamp').checked, textH = lines.length * lh + padd * 2;
+  const bandH = Math.round(withMap ? Math.max(textH, Math.min(w, h) * 0.24) : textH);
+  const c = document.createElement('canvas'); c.width = w; c.height = h + bandH;
+  const g = c.getContext('2d');
+  g.drawImage(bm, 0, 0);
+  g.fillStyle = '#1c1c1c'; g.fillRect(0, h, w, bandH);
+  g.font = `600 ${fs}px system-ui, sans-serif`; g.fillStyle = '#fff'; g.textBaseline = 'top';
+  const ty = h + (bandH - lines.length * lh) / 2;
+  lines.forEach((t, i) => g.fillText(t, padd, ty + i * lh));
+  g.textBaseline = 'alphabetic';
+  if (withMap) {   // дөңгелек карта жолақтың оң жағында (фотоның үстінде емес)
+    const r = Math.round(bandH * 0.42);
+    await drawInset(g, w - r - padd, h + bandH / 2, r, fix.lat, fix.lon, fix.dir, 2500);
+  }
+  return c;
+}
 async function stampPhoto(file, fix, when) {
   const bm = await createImageBitmap(file, { imageOrientation: 'from-image' });
   const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height;
@@ -1596,10 +1618,11 @@ async function rewriteShot(it, fix, what) {
       try {
         let raw = it.raw ? await getFile(it.raw) : null;
         if (!raw) { raw = old; it.raw = 'raw:' + Date.now() + ':' + it.name; await putFile(it.raw, raw); }
-        const bm = await createImageBitmap(raw, { imageOrientation: 'from-image' }), c = document.createElement('canvas');
-        c.width = bm.width; c.height = bm.height; const g = c.getContext('2d'); g.drawImage(bm, 0, 0); bm.close();
-        // фотоның бетінде бұрынғы координат жазуы болса (басқа қосымша / ертеректе GeoFoto) - ол мөлдір емес жолақпен жабылады
-        await stampCanvas(g, c.width, c.height, fix, when, { obj: undefined });
+        // 1.32: координат фотоның ҮСТІНЕ емес, АСТЫНА қосылатын жолаққа жазылады - бастапқы фото толық сақталады
+        // (ешбір жері жабылмайды, сурет төмен қарай ұзарады); карта да сол жолақта. Бастапқы фото (raw) сақтаулы -
+        // орны қайта өзгерсе, жолақ жаңадан салынады.
+        const bm = await createImageBitmap(raw, { imageOrientation: 'from-image' });
+        const c = await stampBelow(bm, fix, when); bm.close();
         u = new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92))).arrayBuffer()); c.width = c.height = 0; orientation = 1;
       } catch (e) { note = 'Суретке жазу мүмкін болмады (жады аз), координат EXIF-те.'; }
     }
@@ -1632,8 +1655,13 @@ async function rewriteShot(it, fix, what) {
   if (fix.dir !== undefined && fix.dir !== null) it.dir = fix.dir; else delete it.dir;
   it.note = note || (what === 'dir' ? 'Бағыт картадан қойылды' : 'Орны картадан қойылды');
   persistShots(); renderList();
+  // компьютер: сақтау папкасы таңдалған болса - жаңа файл сонда өзі жазылады
+  const wrote = IS_PC ? await writeToDir(name, out) : null;
+  if (wrote) { say(`${note ? note + ' ' : ''}Жаңа файл «${wrote}» папкасына жазылды: ${name}`, note ? 'warn' : 'ok'); return; }
   const oldStays = name !== oldName && !it.imported ? ' (Downloads-тағы ескі атты файл өзгермейді)' : '';
-  say(`${note ? note + ' ' : ''}Жаңа файл: ${name}. Телефонға алу үшін «Сақтау» немесе ZIP басыңыз${oldStays}.`, note ? 'warn' : 'ok');
+  say(`${note ? note + ' ' : ''}Жаңа файл: ${name}. Ол әзірге қосымшаның ішінде — ` +
+      (IS_PC ? '«Папкаға сақтау» (папка бір рет таңдалады, кейін файлдар сонда өзі жазылады), «Сақтау» (Downloads) немесе ZIP басыңыз'
+             : 'телефонға алу үшін «Сақтау» немесе ZIP басыңыз') + `${oldStays}.`, note ? 'warn' : 'ok');
 }
 async function editPlace(it) {
   const p = await pickOnMap({ mode: 'point', lat: it.lat, lon: it.lon, title: `№${shots.indexOf(it) + 1} · ${it.time || ''} — орнын көрсетіңіз` });
@@ -2029,12 +2057,28 @@ $('bPlaceAll').onclick = async () => {
   say(`${list.length} файлға орын қойылды (EXIF және файл атына). Енді «Компьютерге (ZIP)»${window.showDirectoryPicker ? ' немесе «Папкаға сақтау»' : ''}.`, 'ok');
 };
 
+// 1.33: компьютерде сақтау папкасы есте қалады (IndexedDB) - орны / бағыты өзгертілген файл сол папкаға өзі жазылады
+const DIR_KEY = '__dir__';
+let saveDir = null;
+function showDir() { const s = $('dirName'); if (s) { s.hidden = !saveDir; s.textContent = saveDir ? `Папка: ${saveDir.name}` : ''; } }
+if (window.showDirectoryPicker) getFile(DIR_KEY).then(d => { if (d && d.kind === 'directory') { saveDir = d; showDir(); } }).catch(() => {});
+async function writeToDir(name, blob) {
+  if (!saveDir) return null;
+  try {
+    let p = await saveDir.queryPermission({ mode: 'readwrite' });
+    if (p !== 'granted') p = await saveDir.requestPermission({ mode: 'readwrite' });
+    if (p !== 'granted') return null;
+    const fh = await saveDir.getFileHandle(name, { create: true }), w = await fh.createWritable(); await w.write(blob); await w.close();
+    return saveDir.name || 'таңдалған';
+  } catch (e) { return null; }
+}
 // Компьютер: таңдаудағы файлдарды бір папкаға жазу (Chrome / Edge - File System Access)
 $('bSaveDir').hidden = !window.showDirectoryPicker;
 $('bSaveDir').onclick = async () => {
   const { list } = zipChoice();
   if (!list.length) { say($('zipDay').value === 'pick' ? 'Тізімнен файлдарды белгілеңіз.' : 'Бұл таңдауда файл жоқ.', 'warn'); return; }
-  let dir; try { dir = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch (e) { return; }
+  let dir; try { dir = await window.showDirectoryPicker({ mode: 'readwrite', id: 'geofoto' }); } catch (e) { return; }
+  saveDir = dir; putFile(DIR_KEY, dir).catch(() => {}); showDir();   // 1.33: папка есте қалады - кейін өзгертілген файлдар осында өзі жазылады
   let n = 0; const miss = [];
   for (const it of list) {
     const b = it.blob || await getFile(it.name); if (!b) { miss.push(it.name); continue; }
@@ -2235,6 +2279,27 @@ $('bVideo').onclick = () => { if ($('sysCam').checked || !(navigator.mediaDevice
 $('shutter').onclick = shoot;
 $('camAim').onclick = camAim;
 $('camClose').onclick = closeCam;
+
+// 1.33: «Артқа» (Android) батырмасы қолданбаны байқаусыз жаппайды:
+//  - ашық терезе (карта, фото қарау, камера) болса - тек сол жабылады;
+//  - видео жазылып жатса - ештеңе болмайды;
+//  - басты бетте - «Шығу үшін тағы бір рет басыңыз», 2 секунд ішінде қайта басса ғана шығады.
+(() => {
+  let armedAt = 0, exiting = false, tt = 0;
+  const toast = s => { let d = $('toast'); if (!d) { d = document.createElement('div'); d.id = 'toast'; document.body.appendChild(d); } d.textContent = s; d.hidden = false; clearTimeout(tt); tt = setTimeout(() => { d.hidden = true; }, 2000); };
+  const guard = () => { try { history.pushState({ gf: 1 }, ''); } catch (e) {} };
+  guard();
+  window.addEventListener('popstate', () => {
+    if (exiting) return;
+    if (!$('pk').hidden) { pkClose(null); guard(); return; }
+    if (!$('vw').hidden) { closeViewer(); guard(); return; }
+    if (!$('cam').hidden) { if (!rec) closeCam(); else say('Видео жазылып жатыр — алдымен тоқтатыңыз.', 'warn'); guard(); return; }
+    const now = Date.now();
+    if (now - armedAt < 2000) { exiting = true; history.back(); return; }   // екінші басу - шығу
+    armedAt = now; guard();
+    toast('Шығу үшін «Артқа»-ны тағы бір рет басыңыз');
+  });
+})();
 $('camSys').onclick = () => {
   if (noCompass() && !manualOk()) {   // no compass: take the direction first, so the phone's camera file gets it too
     camMsg('Алдымен бағытты картадан көрсетіңіз, сосын «Жүйелік камера» басыңыз'); camAim(); return;
