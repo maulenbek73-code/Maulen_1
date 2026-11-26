@@ -235,6 +235,8 @@ body.pc .thw,body.pc .item img,body.pc .item .ph{width:96px;height:96px}
     <div class="vwBottom">
       <button class="btn" id="vwMap">Картада</button>
       <a class="btn" id="vwG" target="_blank" rel="noopener">Google Maps</a>
+      <button class="btn" id="vwPlace" title="Орнын картадан немесе координатпен көрсету">Орнын қою</button>
+      <button class="btn" id="vwDir" title="Түсіру бағытын картадан көрсету">Бағыт</button>
       <button class="btn" id="vwShare">Бөлісу</button>
       <button class="btn" id="vwShareX" title="Файл (құжат) ретінде жіберу — координат EXIF-те сақталады">EXIF-пен бөлісу</button>
       <button class="btn" id="vwSave">Сақтау</button>
@@ -274,7 +276,7 @@ body.pc .thw,body.pc .item img,body.pc .item .ph{width:96px;height:96px}
         <li><b>Компьютерге жіберу</b>: ZIP-ке не кіретінін таңдаңыз — <b>күн</b>, <b>нысан</b> (файл атындағы нысан аты) немесе <b>«Өзім белгілеймін»</b> (тізімде галочка қоясыз). «Компьютерге (ZIP)» оларды бір ZIP файлға жинайды (Downloads). Telegram → 📎 → <b>Файл</b> → Downloads → ZIP → «Избранное». Компьютерде AutoCAD → <b>GEOFOTO</b> → осы ZIP-ті таңдаңыз: ашады, сызбаға қояды, Google Earth файлын жасайды.</li>
         <li><b>Компасы жоқ телефон</b>: түсіріп болған соң тізімдегі <b>«Бағыт»</b> батырмасын басыңыз — карта ашылады, фото қай жаққа қарап түсірілгенін картадан нұқып көрсетесіз (немесе азимутты санмен жазасыз). Бағыт EXIF-ке, файл атына (<code>_A125</code>), KML-ге (сары сызық) және AutoCAD-тағы жебеге түседі.</li>
         <li><b>Фото/видео қосу</b> жолағы әрдайым экранның төменгі жағында: <b>Галерея</b> (Google Фото), <b>Файлдар</b> (файл менеджері — ішкі жады, SD карта, Downloads, DCIM), <b>Папка</b> (папкадағы барлық фото/видео).</li>
-        <li><b>Компьютер нұсқасы</b>: осы бетті компьютерде Chrome / Edge-те ашыңыз (мекенжай жолындағы «Орнату» белгісі — бөлек қосымша болып орнатылады). «Файлдарды таңдау» / «Папканы таңдау» немесе файлдарды бетке сүйреп әкеліңіз. <b>«Координатсыздарға бір орын»</b> — координаты жоқ барлық фотоға картадан бір орын; әрқайсысына бөлек — «Орнын қою». Орны қойылған фотоның бетіне координат (және бұрышына карта) жазылады. Тізімде координаты барлар <b>жасыл</b>, жоқтар <b>қызғылт сары</b> белгімен тұрады. Сосын <b>«Папкаға сақтау»</b> (координат EXIF-те және файл атында + GeoFoto.kml, GeoFoto.csv) немесе ZIP.</li>
+        <li><b>Компьютер нұсқасы</b>: <a href="https://maulenbek73-code.github.io/Maulen_1/" target="_blank" rel="noopener">maulenbek73-code.github.io/Maulen_1</a> — осы бетті компьютерде Chrome / Edge-те ашыңыз (мекенжай жолындағы «Орнату» белгісі — бөлек қосымша болып орнатылады). «Файлдарды таңдау» / «Папканы таңдау» немесе файлдарды бетке сүйреп әкеліңіз. <b>«Координатсыздарға бір орын»</b> — координаты жоқ барлық фотоға картадан бір орын; әрқайсысына бөлек — «Орнын қою». Орны қойылған фотоның бетіне координат (және бұрышына карта) жазылады. Тізімде координаты барлар <b>жасыл</b>, жоқтар <b>қызғылт сары</b> белгімен тұрады. Сосын <b>«Папкаға сақтау»</b> (координат EXIF-те және файл атында + GeoFoto.kml, GeoFoto.csv) немесе ZIP.</li>
         <li><b>Басқа фотоларға координат</b>: «Галерея» / «Файлдар» / «Папка» — бірнеше файл таңдаңыз. EXIF-інде координаты бар фото бірден тізімге түседі; жоқтарына <b>«Орны»</b> басып картадан (немесе координатты жазып) орнын қоясыз — координат EXIF-ке жазылады, файл аты GEOFOTO оқитын түрге келеді. Сосын «Сақтау» немесе ZIP.</li>
         <li><b>Жеке фотоны бөлісу</b>: «Бөлісу» — фото ретінде (Telegram / WhatsApp сығып, EXIF-ті өшіреді, координат тек суреттің бетінде және атында қалады). <b>«EXIF-пен бөлісу»</b> — файл (құжат) ретінде, координат EXIF-те сақталады. Телефон мұны қолдамаса, фото Downloads-қа сақталады: Telegram → 📎 → Файл, WhatsApp → 📎 → Документ арқылы жіберіңіз.</li>
         <li>Компас дұрыс көрсетпесе, телефонды ауада «8» санын сызып бірнеше рет айналдырыңыз (калибрлеу). Темір, машина, электр сымдарының жанында компас қателеседі.</li>
@@ -958,11 +960,19 @@ function getTile(z, x, y) {
   const k = `${z}/${y}/${x}`;
   if (!tileCache.has(k)) {
     tileCache.set(k, fetch(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${k}`)
-      .then(r => (r.ok ? r.blob() : Promise.reject())).then(b => createImageBitmap(b))
+      .then(r => (r.ok ? r.blob() : Promise.reject())).then(b => createImageBitmap(b)).then(bm => tileBmSet(k, bm))
       .catch(() => { setTimeout(() => tileCache.delete(k), 30000); return null; }));   // offline: retry later
-    if (tileCache.size > 80) tileCache.delete(tileCache.keys().next().value);
+    if (tileCache.size > 600) tileCache.delete(tileCache.keys().next().value);
   }
   return tileCache.get(k);
+}
+// дайын тайлдар (картаны күтпей бірден салу үшін): кілт -> ImageBitmap
+const tileBm = new Map();
+function tileBmSet(k, bm) {
+  tileBm.set(k, bm);
+  if (tileBm.size > 600) { const o = tileBm.keys().next().value; tileBm.delete(o); }
+  if (typeof pkDrawSoon === 'function') pkDrawSoon();
+  return bm;
 }
 // North-up round map around the point, yellow view cone toward dir, red dot = camera. Offline: dark compass.
 async function drawInset(g, cx, cy, r, lat, lon, dir, waitMs) {
@@ -1434,12 +1444,24 @@ const SHOTS_KEY = 'geokamera.shots';
 let shots = [];
 const picked = new Set();   // files ticked for "Өзім белгілеймін"
 try { shots = JSON.parse(localStorage.getItem(SHOTS_KEY)) || []; } catch (e) {}
+// Тізім IndexedDB-де ('__shots__'): localStorage көлемі аз (~5 МБ) - көп фото қосылса тізім (кішкентай суреттер) жоғалатын.
+// localStorage-та тек кішкентай суретсіз қысқа көшірмесі (IndexedDB ашылмаса).
+const LIST_KEY = '__shots__';
+let persistT = 0;
 function persistShots() {
-  const keep = shots.slice(-MAX_SHOTS).map(({ blob, ...m }) => m);
-  try { localStorage.setItem(SHOTS_KEY, JSON.stringify(keep)); } catch (e) {
-    try { localStorage.setItem(SHOTS_KEY, JSON.stringify(keep.map(({ thumb, ...m }) => m))); } catch (e2) {}
-  }
+  clearTimeout(persistT);
+  persistT = setTimeout(() => {
+    const keep = shots.slice(-MAX_SHOTS).map(({ blob, ...m }) => m);
+    putFile(LIST_KEY, keep).catch(() => {});
+    try { localStorage.setItem(SHOTS_KEY, JSON.stringify(keep.slice(-300).map(({ thumb, ...m }) => m))); } catch (e) {}
+  }, 300);
 }
+const shotsLoaded = getFile(LIST_KEY).then(l => {
+  if (Array.isArray(l) && l.length) {   // ashylyp jatqanda qosylghandar joghalmaidy
+    const extra = shots.filter(s => !l.some(x => x.name === s.name)); shots = l.concat(extra); if (extra.length) persistShots(); renderList();
+  }
+  else if (shots.length) persistShots();   // eski (localStorage) tizim - IndexedDB-ge koshiriledi
+}).catch(() => {});
 function renderList() {
   $('listCard').hidden = !shots.length;
   { const g = shots.filter(s => s.lat !== undefined).length; $('count').textContent = `${shots.length} файл · координатымен ${g}${shots.length - g ? ` · жоқ ${shots.length - g}` : ''}`; }
@@ -1528,7 +1550,7 @@ async function processShot(fn, file, now, fix, thumb, quiet) {
   const it = await fn(file, now, fix);
   return addShot(it, now, thumb, quiet);
 }
-const MAX_SHOTS = 300;
+const MAX_SHOTS = 5000;   // тізімде; файлдар IndexedDB-де (браузер дискінің бір бөлігін береді)
 let listDirty = false;
 async function addShot(it, now, thumb, quiet) {
   if (shots.some(s => s.name === it.name)) it.name = it.name.replace(/(\.\w+)$/, `_${Date.now() % 1000}$1`);   // two files in the same second
@@ -1632,34 +1654,61 @@ function getRefTile(z, x, y) {   // street / place names on top of the photo map
   const k = `r${z}/${y}/${x}`;
   if (!tileCache.has(k)) {
     tileCache.set(k, fetch(`https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/${z}/${y}/${x}`)
-      .then(r => (r.ok ? r.blob() : Promise.reject())).then(b => createImageBitmap(b)).catch(() => null));
-    if (tileCache.size > 160) tileCache.delete(tileCache.keys().next().value);
+      .then(r => (r.ok ? r.blob() : Promise.reject())).then(b => createImageBitmap(b)).then(bm => tileBmSet(k, bm)).catch(() => null));
+    if (tileCache.size > 600) tileCache.delete(tileCache.keys().next().value);
   }
   return tileCache.get(k);
+}
+// гибрид: елді мекен, көше, шекара атаулары (Esri Boundaries and Places)
+function getLabelTile(z, x, y) {
+  const k = `l${z}/${y}/${x}`;
+  if (!tileCache.has(k)) {
+    tileCache.set(k, fetch(`https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/${z}/${y}/${x}`)
+      .then(r => (r.ok ? r.blob() : Promise.reject())).then(b => createImageBitmap(b)).then(bm => tileBmSet(k, bm)).catch(() => null));
+    if (tileCache.size > 600) tileCache.delete(tileCache.keys().next().value);
+  }
+  return tileCache.get(k);
+}
+// жаңа тайл келгенде - қайта салу (жиі емес)
+function pkDrawSoon() {
+  if (pk.soon || $('pk').hidden) return;
+  pk.soon = setTimeout(() => { pk.soon = 0; if (!$('pk').hidden) pkDraw(); }, 50);
 }
 const azBetween = (la1, lo1, la2, lo2) => (Math.atan2((lo2 - lo1) * Math.cos(la1 / RHO) * 111320, (la2 - la1) * 110574) * RHO + 360) % 360;
 function pkDraw() {
   cancelAnimationFrame(pk.raf);
-  pk.raf = requestAnimationFrame(async () => {
+  pk.raf = requestAnimationFrame(() => {
     const c = $('pkMap'), dpr = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
     if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
     const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const z = pk.z, x0 = pk.cx - W / 2, y0 = pk.cy - H / 2, list = [];
     for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W) / 256); tx++)
       for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H) / 256); ty++) if (ty >= 0 && ty < 2 ** z) list.push([tx, ty]);
-    const gen = ++pk.gen;
+    ++pk.gen;
     pkInfo();
-    // Above z17 Esri often has only "Map data not yet available" here, so z18-19 stretch the z17 tile
-    const iz = Math.min(z, TILE_Z), k = z - iz, f = 2 ** k, sub = 256 / f;
-    const imgs = await Promise.all(list.map(async ([tx, ty]) => {
-      const n = 2 ** z, wx = ((tx % n) + n) % n, px = wx >> k, py = ty >> k;
-      return { tx, ty, sx: (wx & (f - 1)) * sub, sy: (ty & (f - 1)) * sub, im: await getTile(iz, px, py), ref: iz >= 14 ? await getRefTile(iz, px, py) : null };
-    }));
-    if (gen !== pk.gen || $('pk').hidden) return;   // a newer frame is already on its way
+    // 1.31: tailardy kutpei - dain bolghandary birden salynady; jok bolsa kishi masshtabtaghy (bulynghyr) tail turady,
+    // kelgende ozi qaita salynady. Gibrid: suret + jol + atau. z17-den joghary - z17 tail ulkeitiledi.
+    const iz = Math.min(z, TILE_Z), n = 2 ** z;
     g.fillStyle = '#26332c'; g.fillRect(0, 0, W, H);
-    for (const t of imgs) {
-      const dx = t.tx * 256 - x0, dy = t.ty * 256 - y0;
-      for (const im of [t.im, t.ref]) if (im) g.drawImage(im, t.sx, t.sy, sub, sub, dx, dy, 257, 257);
+    const part = (pre, sz, wx, ty) => {   // sz masshtabtaghy taildyn (wx, ty) z-tail bolighi
+      const d = z - sz, f = 2 ** d, sub = 256 / f, k = `${pre}${sz}/${ty >> d}/${wx >> d}`;
+      return { k, x: wx >> d, y: ty >> d, sx: (wx & (f - 1)) * sub, sy: (ty & (f - 1)) * sub, sub };
+    };
+    for (const [tx, ty] of list) {
+      const wx = ((tx % n) + n) % n, dx = tx * 256 - x0, dy = ty * 256 - y0;
+      // suret
+      let p = part('', iz, wx, ty), bm = tileBm.get(p.k);
+      if (!bm) {
+        getTile(iz, p.x, p.y);
+        for (let s = iz - 1; s >= Math.max(1, iz - 6) && !bm; s--) { const q = part('', s, wx, ty); bm = tileBm.get(q.k); if (bm) p = q; }
+      }
+      if (bm) g.drawImage(bm, p.sx, p.sy, p.sub, p.sub, dx, dy, 257, 257);
+      // joldar (z12+) jane ataular (z5+)
+      for (const [pre, minZ, fn] of [['r', 12, getRefTile], ['l', 5, getLabelTile]]) {
+        if (iz < minZ) continue;
+        const q = part(pre, iz, wx, ty), rb = tileBm.get(q.k);
+        if (rb) g.drawImage(rb, q.sx, q.sy, q.sub, q.sub, dx, dy, 257, 257); else fn(iz, q.x, q.y);
+      }
     }
     const lw = 3;
     if (pk.mode === 'all') drawMarkers(g, x0, y0, z, W, H);
@@ -1689,7 +1738,7 @@ function pkInfo() {
     $('pkInfo').innerHTML = `<b>Барлығы картада: ${n}</b>${no ? ` · координатсыз ${no}` : ''}<br><span style="opacity:.8">Фото иконкасын басыңыз — фото ашылады. Сары сызық — түсіру бағыты.</span>`;
   } else if (pk.mode === 'point') {
     const [la, lo] = pxToLL(pk.cx, pk.cy, pk.z), [E, N] = project(k, la, lo);
-    $('pkInfo').innerHTML = `${esc(pk.title)}<br><b>${la.toFixed(7)}, ${lo.toFixed(7)}</b><br>${crsFits(k, lo) ? `${esc(crsName(k))}: X ${E.toFixed(3)} · Y ${N.toFixed(3)}` : ''}<br><span style="opacity:.8">Картаны жылжытып, сары кресті орынға қойыңыз</span>`;
+    $('pkInfo').innerHTML = `${esc(pk.title)}<br><b>${la.toFixed(7)}, ${lo.toFixed(7)}</b><br>${crsFits(k, lo) ? `${esc(crsName(k))}: X ${E.toFixed(3)} · Y ${N.toFixed(3)}` : ''}<br><span style="opacity:.8">Орынды картадан бір рет нұқыңыз — сары крест сол жерге қойылады (дөңгелекпен / екі саусақпен үлкейту). Сосын «Сақтау».</span>`;
   } else {
     $('pkInfo').innerHTML = `${esc(pk.title)}<br><b>${pk.dir === null ? 'Бағыт таңдалмады' : 'Азимут: ' + dirText(pk.dir)}</b><br><span style="opacity:.8">Фото қараған затты картадан нұқыңыз (қызыл нүкте — түсірген орын)</span>`;
   }
@@ -1769,12 +1818,15 @@ function pkEnter() {
     if (pk.ptrs.size || pk.moved > 6) return;
     const r = c.getBoundingClientRect(), W = c.clientWidth, H = c.clientHeight;   // a tap aims the photo at that spot
     if (pk.mode === 'all') { const it = hitMarker(e.clientX - r.left, e.clientY - r.top, W, H); if (it) openViewer(it, true); return; }
+    // 1.31: орын - картаны бір рет нұқу жеткілікті: сары крест сол жерге көшеді (жылжытудың керегі жоқ)
+    if (pk.mode === 'point') { pk.cx += e.clientX - r.left - W / 2; pk.cy += e.clientY - r.top - H / 2; pk.gpsAt = null; pkDraw(); return; }
     if (pk.mode !== 'dir') return;
     const [la, lo] = pxToLL(pk.cx - W / 2 + e.clientX - r.left, pk.cy - H / 2 + e.clientY - r.top, pk.z);
     if (Math.abs(la - pk.lat) + Math.abs(lo - pk.lon) < 1e-7) return;
     pk.tgt = [la, lo]; pk.dir = azBetween(pk.lat, pk.lon, la, lo); pkDraw();
   };
   c.addEventListener('pointerup', up); c.addEventListener('pointercancel', e => pk.ptrs.delete(e.pointerId));
+  c.addEventListener('dblclick', e => { const r = c.getBoundingClientRect(); pkZoom(1, e.clientX - r.left, e.clientY - r.top); });
   c.addEventListener('wheel', e => { e.preventDefault(); const r = c.getBoundingClientRect(); pkZoom(e.deltaY < 0 ? 1 : -1, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
   window.addEventListener('resize', () => { if (!$('pk').hidden) pkDraw(); });
   $('pkPlus').onclick = () => pkZoom(1); $('pkMinus').onclick = () => pkZoom(-1);
@@ -1861,6 +1913,9 @@ async function vwShow(it) {
   $('vwInfo').innerHTML = `<b>№${i + 1} · ${esc(it.date || '')} ${esc(it.time || '')}</b> · ${it.kind === 'video' ? 'видео' : 'фото'}${it.dir !== undefined ? ' · ' + esc(dirText(it.dir)) : ''}` +
     `<br>${geo ? `${it.lat.toFixed(7)}, ${it.lon.toFixed(7)}${crsFits(k, it.lon) ? ` · X ${E.toFixed(3)} Y ${N.toFixed(3)}` : ''}` : 'координат жоқ'}<br><span style="opacity:.75">${esc(it.name)}</span>`;
   $('vwMap').hidden = $('vwG').hidden = !geo;
+  const canEdit = !!(it.blob || it.stored);
+  $('vwPlace').hidden = !canEdit; $('vwPlace').textContent = geo ? 'Орны' : 'Орнын қою';
+  $('vwDir').hidden = !canEdit || !geo;
   if (geo) $('vwG').href = `https://www.google.com/maps/search/?api=1&query=${it.lat.toFixed(7)},${it.lon.toFixed(7)}`;
   // corner map: where it was taken and which way it looks (yellow cone); tap = the big map
   const mc = $('vwMapC'); mc.hidden = !geo;
@@ -1893,6 +1948,9 @@ function closeViewer() {
   $('vwPrev').onclick = () => vwStep(-1); $('vwNext').onclick = () => vwStep(1);
   $('vwShare').onclick = () => vw.it && share(vw.it);
   $('vwShareX').onclick = () => vw.it && shareExif(vw.it);
+  // 1.31: қарау бетінен орын / бағыт: карта ашылады, сақтаған соң сол фото қайта ашылады
+  $('vwPlace').onclick = async () => { const it = vw.it; if (!it) return; const fm = vw.fromMap; closeViewer(); await editPlace(it); openViewer(it, fm); };
+  $('vwDir').onclick = async () => { const it = vw.it; if (!it || it.lat === undefined) return; const fm = vw.fromMap; closeViewer(); await editDir(it); openViewer(it, fm); };
   $('vwSave').onclick = () => vw.it && save(vw.it);
   $('vwMapC').onclick = () => $('vwMap').click();
   $('vwMap').onclick = () => {
