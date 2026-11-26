@@ -100,6 +100,12 @@ details li{margin:4px 0}
 #camRec{color:#ff5252;font-weight:800}
 .item .pick{width:22px;height:22px;margin:0}
 .item.sel{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
+/* координаты барлар - жасыл, жоқтар - қызғылт сары */
+.item.geo,.item.nogeo{border-left:5px solid;border-radius:8px;padding:6px 6px 6px 8px}
+.item.geo{border-left-color:var(--ok);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.item.nogeo{border-left-color:var(--warn);background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.badge{display:inline-block;font:700 11px/1 var(--sans);padding:4px 7px;border-radius:999px;vertical-align:1px;white-space:nowrap}
+.badge.ok{background:var(--ok);color:#fff}.badge.no{background:var(--warn);color:#fff}
 .wide{width:100%;padding:12px;font-weight:700}
 /* Map picker: put a photo on the map, or aim its direction (phones without a compass) */
 #pk{position:fixed;inset:0;z-index:60;background:#111;color:#fff;touch-action:none}
@@ -225,6 +231,7 @@ details li{margin:4px 0}
       <button class="btn" id="vwMap">Картада</button>
       <a class="btn" id="vwG" target="_blank" rel="noopener">Google Maps</a>
       <button class="btn" id="vwShare">Бөлісу</button>
+      <button class="btn" id="vwShareX" title="Файл (құжат) ретінде жіберу — координат EXIF-те сақталады">EXIF-пен бөлісу</button>
       <button class="btn" id="vwSave">Сақтау</button>
     </div>
   </div>
@@ -262,8 +269,9 @@ details li{margin:4px 0}
         <li><b>Компьютерге жіберу</b>: ZIP-ке не кіретінін таңдаңыз — <b>күн</b>, <b>нысан</b> (файл атындағы нысан аты) немесе <b>«Өзім белгілеймін»</b> (тізімде галочка қоясыз). «Компьютерге (ZIP)» оларды бір ZIP файлға жинайды (Downloads). Telegram → 📎 → <b>Файл</b> → Downloads → ZIP → «Избранное». Компьютерде AutoCAD → <b>GEOFOTO</b> → осы ZIP-ті таңдаңыз: ашады, сызбаға қояды, Google Earth файлын жасайды.</li>
         <li><b>Компасы жоқ телефон</b>: түсіріп болған соң тізімдегі <b>«Бағыт»</b> батырмасын басыңыз — карта ашылады, фото қай жаққа қарап түсірілгенін картадан нұқып көрсетесіз (немесе азимутты санмен жазасыз). Бағыт EXIF-ке, файл атына (<code>_A125</code>), KML-ге (сары сызық) және AutoCAD-тағы жебеге түседі.</li>
         <li><b>Фото/видео қосу</b> жолағы әрдайым экранның төменгі жағында: <b>Галерея</b> (Google Фото), <b>Файлдар</b> (файл менеджері — ішкі жады, SD карта, Downloads, DCIM), <b>Папка</b> (папкадағы барлық фото/видео).</li>
-        <li><b>Компьютер нұсқасы</b>: осы бетті компьютерде Chrome / Edge-те ашыңыз (мекенжай жолындағы «Орнату» белгісі — бөлек қосымша болып орнатылады). «Файлдарды таңдау» / «Папканы таңдау» немесе файлдарды бетке сүйреп әкеліңіз. <b>«Координатсыздарға бір орын»</b> — координаты жоқ барлық фотоға картадан бір орын; әрқайсысына бөлек — «Орнын қою». Сосын <b>«Папкаға сақтау»</b> (координат EXIF-те және файл атында + GeoFoto.kml, GeoFoto.csv) немесе ZIP.</li>
+        <li><b>Компьютер нұсқасы</b>: осы бетті компьютерде Chrome / Edge-те ашыңыз (мекенжай жолындағы «Орнату» белгісі — бөлек қосымша болып орнатылады). «Файлдарды таңдау» / «Папканы таңдау» немесе файлдарды бетке сүйреп әкеліңіз. <b>«Координатсыздарға бір орын»</b> — координаты жоқ барлық фотоға картадан бір орын; әрқайсысына бөлек — «Орнын қою». Орны қойылған фотоның бетіне координат (және бұрышына карта) жазылады. Тізімде координаты барлар <b>жасыл</b>, жоқтар <b>қызғылт сары</b> белгімен тұрады. Сосын <b>«Папкаға сақтау»</b> (координат EXIF-те және файл атында + GeoFoto.kml, GeoFoto.csv) немесе ZIP.</li>
         <li><b>Басқа фотоларға координат</b>: «Галерея» / «Файлдар» / «Папка» — бірнеше файл таңдаңыз. EXIF-інде координаты бар фото бірден тізімге түседі; жоқтарына <b>«Орны»</b> басып картадан (немесе координатты жазып) орнын қоясыз — координат EXIF-ке жазылады, файл аты GEOFOTO оқитын түрге келеді. Сосын «Сақтау» немесе ZIP.</li>
+        <li><b>Жеке фотоны бөлісу</b>: «Бөлісу» — фото ретінде (Telegram / WhatsApp сығып, EXIF-ті өшіреді, координат тек суреттің бетінде және атында қалады). <b>«EXIF-пен бөлісу»</b> — файл (құжат) ретінде, координат EXIF-те сақталады. Телефон мұны қолдамаса, фото Downloads-қа сақталады: Telegram → 📎 → Файл, WhatsApp → 📎 → Документ арқылы жіберіңіз.</li>
         <li>Компас дұрыс көрсетпесе, телефонды ауада «8» санын сызып бірнеше рет айналдырыңыз (калибрлеу). Темір, машина, электр сымдарының жанында компас қателеседі.</li>
         <li>Координат үш жерге жазылады: фотоның EXIF-іне / видеоның метадерегіне, файл атына (<code>_N42.341700_E69.590100</code>) және (қосулы болса) суреттің өзіне.</li>
         <li><b>Фотоны қарау</b>: тізімдегі кішкентай суретті басыңыз — фото (видео) толық ашылады, ‹ › немесе саусақпен жанына сырғытып келесісіне өтесіз.</li>
@@ -1399,6 +1407,20 @@ async function share(item) {
     try { await navigator.share({ files: [f], title: item.name }); } catch (e) {}
   } else say('Бұл телефон файлмен бөлісуді қолдамайды — «Сақтау» батырмасын басыңыз.', 'warn');
 }
+// EXIF-пен бөлісу: мессенджер фотоны «фото» ретінде алса, сығып, EXIF-ті (координатты) өшіреді.
+// Сурет MIME-і көрсетілмесе (application/octet-stream) - ФАЙЛ (құжат) ретінде кетеді, EXIF сақталады.
+// Телефон мұны қолдамаса - Downloads-қа сақталады да, мессенджерде «Файл / Документ» арқылы жіберу айтылады.
+async function shareExif(item) {
+  const blob = await blobOf(item); if (!blob) return;
+  const f = new File([blob], item.name, { type: 'application/octet-stream' });
+  if (navigator.canShare && navigator.canShare({ files: [f] })) {
+    try { await navigator.share({ files: [f], title: item.name }); say(`${item.name} файл ретінде жіберілді — EXIF (координат) сақталады.`, 'ok'); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  download(blob, item.name);
+  say(`${item.name} Downloads-қа сақталды. EXIF (координат) сақталуы үшін оны ФАЙЛ ретінде жіберіңіз: Telegram → 📎 → Файл → Downloads; ` +
+      `WhatsApp → 📎 → Документ → Downloads. Галерея / «Фото» арқылы жіберсеңіз, мессенджер EXIF-ті өшіреді.`, 'warn');
+}
 
 // The list (without the files) is kept on the phone, so map links work after the app restarts
 const SHOTS_KEY = 'geokamera.shots';
@@ -1413,7 +1435,7 @@ function persistShots() {
 }
 function renderList() {
   $('listCard').hidden = !shots.length;
-  $('count').textContent = shots.length + ' файл';
+  { const g = shots.filter(s => s.lat !== undefined).length; $('count').textContent = `${shots.length} файл · координатымен ${g}${shots.length - g ? ` · жоқ ${shots.length - g}` : ''}`; }
   $('bMapAll').disabled = !shots.some(s => s.lat !== undefined);
   fillZipDays();
   const box = $('list'), picking = $('zipDay').value === 'pick'; box.textContent = '';
@@ -1421,7 +1443,7 @@ function renderList() {
   for (const n of [...picked]) if (!shots.some(s => s.name === n)) picked.delete(n);
   $('pickCount').textContent = `белгіленді: ${picked.size}`;
   shots.forEach((it, idx) => {
-    const row = document.createElement('div'); row.className = 'item' + (picking && picked.has(it.name) ? ' sel' : '');
+    const row = document.createElement('div'); row.className = 'item' + (it.lat !== undefined ? ' geo' : ' nogeo') + (picking && picked.has(it.name) ? ' sel' : '');
     const th = document.createElement(it.thumb ? 'img' : 'div'); th.className = 'ph'; if (it.thumb) th.src = it.thumb;
     if (picking) {   // tap the thumbnail or the box to put the file in the ZIP
       const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'pick'; cb.checked = picked.has(it.name);
@@ -1439,6 +1461,8 @@ function renderList() {
     const info = document.createElement('div');
     const tm = document.createElement('div'); tm.className = 'tm';
     tm.textContent = `№${idx + 1} · ${it.time || ''} · ${it.kind === 'video' ? 'видео' : 'фото'}${it.dir !== undefined ? ' · ' + dirText(it.dir) : ''}`;
+    const bd = document.createElement('span'); bd.className = 'badge ' + (it.lat !== undefined ? 'ok' : 'no');
+    bd.textContent = it.lat !== undefined ? '✓ координат бар' : 'координат жоқ'; tm.append(' ', bd);
     const nm = document.createElement('div'); nm.className = 'nm meta'; nm.textContent = it.name;
     info.append(tm, nm);
     if (it.note) { const n = document.createElement('div'); n.className = 'meta'; n.style.color = 'var(--warn)'; n.textContent = it.note; info.appendChild(n); }
@@ -1446,7 +1470,8 @@ function renderList() {
     if (it.blob || it.stored) {
       const r = document.createElement('div'); r.className = 'row';
       const btn = (t, fn, tip) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = t; b.onclick = fn; if (tip) b.title = tip; r.appendChild(b); };
-      btn('Сақтау', () => save(it)); btn('Бөлісу', () => share(it));
+      btn('Сақтау', () => save(it)); btn('Бөлісу', () => share(it), 'Фото ретінде (мессенджер EXIF-ті өшіруі мүмкін)');
+      btn('EXIF-пен бөлісу', () => shareExif(it), 'Файл (құжат) ретінде жіберу — координат EXIF-те сақталады');
       btn(it.lat === undefined ? 'Орнын қою' : 'Орны', () => editPlace(it), 'Орнын картадан немесе координатпен көрсету');
       if (it.lat !== undefined) btn('Бағыт', () => editDir(it), 'Түсіру бағытын картадан көрсету (компасы жоқ телефонға)');
       info.appendChild(r);
@@ -1516,6 +1541,18 @@ async function rewriteShot(it, fix, what) {
     let u = new Uint8Array(await old.arrayBuffer());
     const ex = readExifBasic(u), when = new Date(it.ms || Date.now());
     let orientation = ex.orientation;
+    // қосылған (импорт) фото: орны қойылғанда координат суреттің бетіне де жазылады; бастапқы суреті (жазусыз) сақталады -
+    // орны қайта өзгерсе, жазу сол бастапқы суретке қайта салынады (бірінің үстіне бірі түспейді)
+    if (it.imported && ($('stamp').checked || $('mapStamp').checked) && (what === 'place' || it.raw)) {
+      try {
+        let raw = it.raw ? await getFile(it.raw) : null;
+        if (!raw) { raw = old; it.raw = 'raw:' + Date.now() + ':' + it.name; await putFile(it.raw, raw); }
+        const bm = await createImageBitmap(raw, { imageOrientation: 'from-image' }), c = document.createElement('canvas');
+        c.width = bm.width; c.height = bm.height; const g = c.getContext('2d'); g.drawImage(bm, 0, 0); bm.close();
+        await stampCanvas(g, c.width, c.height, fix, when);
+        u = new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92))).arrayBuffer()); c.width = c.height = 0; orientation = 1;
+      } catch (e) { note = 'Суретке жазу мүмкін болмады (жады аз), координат EXIF-те.'; }
+    }
     if (!it.imported) {   // taken in the app: rewrite the text band (and the map corner) so the new place / direction is on the picture too
       try {
         const bm = await createImageBitmap(old, { imageOrientation: 'from-image' }), c = document.createElement('canvas');
@@ -1827,6 +1864,7 @@ function closeViewer() {
   $('vwClose').onclick = closeViewer;
   $('vwPrev').onclick = () => vwStep(-1); $('vwNext').onclick = () => vwStep(1);
   $('vwShare').onclick = () => vw.it && share(vw.it);
+  $('vwShareX').onclick = () => vw.it && shareExif(vw.it);
   $('vwSave').onclick = () => vw.it && save(vw.it);
   $('vwMapC').onclick = () => $('vwMap').click();
   $('vwMap').onclick = () => {
