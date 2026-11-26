@@ -101,6 +101,12 @@ details li{margin:4px 0}
 #camRec{color:#ff5252;font-weight:800}
 .item .pick{width:22px;height:22px;margin:0}
 .item.sel{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
+/* 1.34: белгілеу жолағы тізімді айналдырғанда жоғарыда тұрады */
+#pickRow{position:sticky;top:0;z-index:5;background:var(--card);padding:8px 0 10px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.btn.del{color:var(--err);border-color:var(--err)}
+.btn.del.armed{background:var(--err);color:#fff}
+.item.picking .tm,.item.picking .nm{cursor:pointer}
+input.pick{width:24px;height:24px;accent-color:var(--accent)}
 .thw{position:relative;width:64px;height:64px}
 .thw .ph{cursor:zoom-in}
 .thw .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8);cursor:pointer}
@@ -241,12 +247,14 @@ body.pc .thw,body.pc .item img,body.pc .item .ph{width:96px;height:96px}
       <button class="btn" id="vwShare">Бөлісу</button>
       <button class="btn" id="vwShareX" title="Файл (құжат) ретінде жіберу — координат EXIF-те сақталады">EXIF-пен бөлісу</button>
       <button class="btn" id="vwSave">Сақтау</button>
+      <button class="btn del" id="vwDel" title="Осы файлды тізімнен және қосымшадан өшіру">Өшіру</button>
     </div>
   </div>
 
   <section class="card" id="listCard" hidden>
     <div class="row" style="justify-content:space-between;margin-bottom:10px"><b>Түсірілімдер</b><span class="meta" id="count"></span></div>
     <div class="row" style="margin-bottom:12px">
+      <button class="btn primary" id="bPick" title="Бірнеше фото/видеоны белгілеп: бөлісу, сақтау немесе өшіру">☑ Белгілеу</button>
       <button class="btn" id="bMapAll" title="Барлық фото картада: иконканы басқанда фото ашылады">Барлығы картада (фотомен)</button>
       <button class="btn" id="bPlaceAll" title="Координаты жоқ барлық фото/видеоға (белгілеу режимінде - белгіленгендерге) картадан бір орын қою">Координатсыздарға бір орын</button>
       <button class="btn" id="bClear">Тізімді тазалау</button>
@@ -258,10 +266,15 @@ body.pc .thw,body.pc .item img,body.pc .item .ph{width:96px;height:96px}
       <button class="btn" id="bSaveDir" title="Таңдаудағы файлдарды (координатымен) компьютердегі папкаға жазу" hidden>Папкаға сақтау</button>
       <span class="meta" id="dirName" hidden></span>
     </div>
-    <div class="row" id="pickRow" style="margin-bottom:12px" hidden>
-      <button class="btn" id="bPickAll">Барлығын белгілеу</button>
+    <div class="row" id="pickRow" hidden>
+      <b id="pickCount" style="flex-basis:100%;font-size:14px"></b>
+      <button class="btn" id="bPickAll">Барлығын</button>
       <button class="btn" id="bPickNone">Белгіні алу</button>
-      <span class="meta" id="pickCount"></span>
+      <button class="btn primary" id="bPkShare" title="Фото ретінде (мессенджер EXIF-ті өшіруі мүмкін)">Бөлісу</button>
+      <button class="btn" id="bPkShareX" title="Файл (құжат) ретінде — координат EXIF-те сақталады">EXIF-пен бөлісу</button>
+      <button class="btn" id="bPkSave" title="Белгіленгендерді Downloads (Загрузки) папкасына сақтау">Сақтау</button>
+      <button class="btn del" id="bPkDel" title="Белгіленгендерді тізімнен және қосымшадан өшіру">Өшіру</button>
+      <button class="btn" id="bPickDone">Дайын</button>
     </div>
     <div class="list" id="list"></div>
   </section>
@@ -1492,9 +1505,11 @@ function renderList() {
   const box = $('list'), picking = $('zipDay').value === 'pick'; box.textContent = '';
   $('pickRow').hidden = !picking;
   for (const n of [...picked]) if (!shots.some(s => s.name === n)) picked.delete(n);
-  $('pickCount').textContent = `белгіленді: ${picked.size}`;
+  $('pickCount').textContent = picked.size ? `Белгіленді: ${picked.size} файл` : 'Файлдарды белгілеңіз (галочка немесе жазуын басыңыз)';
+  $('bPick').textContent = picking ? '☑ Белгілеуді жабу' : '☑ Белгілеу';
+  for (const id of ['bPkShare', 'bPkShareX', 'bPkSave', 'bPkDel', 'bPickNone']) $(id).disabled = !picked.size;
   shots.forEach((it, idx) => {
-    const row = document.createElement('div'); row.className = 'item' + (it.lat !== undefined ? ' geo' : ' nogeo') + (picking && picked.has(it.name) ? ' sel' : '');
+    const row = document.createElement('div'); row.className = 'item' + (it.lat !== undefined ? ' geo' : ' nogeo') + (picking ? ' picking' : '') + (picking && picked.has(it.name) ? ' sel' : '');
     const th = document.createElement(it.thumb ? 'img' : 'div'); th.className = 'ph'; if (it.thumb) th.src = it.thumb;
     // кішкентай суретті басу - фото / видео әрдайым ашылады (белгілеу режимінде де; белгілеу - тек галочкамен)
     th.onclick = () => openViewer(it); th.title = it.kind === 'video' ? 'Видеоны ашу' : 'Фотоны ашу';
@@ -1504,7 +1519,7 @@ function renderList() {
     if (it.kind === 'video') { const pl = document.createElement('span'); pl.className = 'play'; pl.textContent = '▶'; pl.onclick = () => openViewer(it); thw.appendChild(pl); }
     if (picking) {
       const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'pick'; cb.checked = picked.has(it.name);
-      cb.setAttribute('aria-label', `№${idx + 1} ZIP-ке қосу`);
+      cb.setAttribute('aria-label', `№${idx + 1} белгілеу`);
       cb.onchange = () => { if (picked.has(it.name)) picked.delete(it.name); else picked.add(it.name); renderList(); };
       const wrap = document.createElement('div'); wrap.style.cssText = 'display:grid;gap:6px;justify-items:center'; wrap.append(thw, cb);
       row.appendChild(wrap);
@@ -1516,6 +1531,8 @@ function renderList() {
     bd.textContent = it.lat !== undefined ? '✓ координат бар' : 'координат жоқ'; tm.append(' ', bd);
     const nm = document.createElement('div'); nm.className = 'nm meta'; nm.textContent = it.name;
     info.append(tm, nm);
+    // белгілеу режимінде жазуын басу да белгілейді (телефонда галочкаға тию қиын)
+    if (picking) { tm.onclick = nm.onclick = () => { if (picked.has(it.name)) picked.delete(it.name); else picked.add(it.name); renderList(); }; }
     if (it.note) { const n = document.createElement('div'); n.className = 'meta'; n.style.color = 'var(--warn)'; n.textContent = it.note; info.appendChild(n); }
     if (it.lat !== undefined) { const m = document.createElement('div'); m.className = 'maps'; m.style.marginTop = '6px'; mapLinks(m, it.lat, it.lon); info.appendChild(m); }
     if (it.blob || it.stored) {
@@ -2294,6 +2311,7 @@ $('camClose').onclick = closeCam;
     if (!$('pk').hidden) { pkClose(null); guard(); return; }
     if (!$('vw').hidden) { closeViewer(); guard(); return; }
     if (!$('cam').hidden) { if (!rec) closeCam(); else say('Видео жазылып жатыр — алдымен тоқтатыңыз.', 'warn'); guard(); return; }
+    if ($('zipDay').value === 'pick') { setPicking(false); guard(); return; }   // белгілеу режимі жабылады
     const now = Date.now();
     if (now - armedAt < 2000) { exiting = true; history.back(); return; }   // екінші басу - шығу
     armedAt = now; guard();
@@ -2312,6 +2330,70 @@ $('bZip').onclick = makeDayZip;
 $('zipDay').onchange = renderList;
 $('bPickAll').onclick = () => { shots.forEach(s => picked.add(s.name)); renderList(); };
 $('bPickNone').onclick = () => { picked.clear(); renderList(); };
+// 1.34: бірнеше файлды белгілеп - бөлісу / сақтау / өшіру (телефон да, компьютер де)
+let zipPrev = '';
+function setPicking(on) {
+  const s = $('zipDay');
+  if (on) { if (s.value !== 'pick') zipPrev = s.value; s.value = 'pick'; }
+  else { picked.clear(); s.value = zipPrev && [...s.options].some(o => o.value === zipPrev) ? zipPrev : (s.options[0] || {}).value || ''; }
+  renderList();
+}
+$('bPick').onclick = () => setPicking($('zipDay').value !== 'pick');
+$('bPickDone').onclick = () => setPicking(false);
+const pickedList = () => shots.filter(s => picked.has(s.name));
+async function shareMany(exif) {
+  const list = pickedList();
+  if (!list.length) { say('Алдымен тізімнен файлдарды белгілеңіз.', 'warn'); return; }
+  if (list.length === 1) return exif ? shareExif(list[0]) : share(list[0]);
+  const fs = [], blobs = [], miss = [];
+  for (const it of list) {
+    const b = it.blob || await getFile(it.name);
+    if (b) { fs.push(new File([b], it.name, { type: exif ? 'application/octet-stream' : b.type })); blobs.push([b, it.name]); } else miss.push(it.name);
+  }
+  if (!fs.length) { say('Белгіленген файлдардың көшірмесі қосымшада жоқ.', 'warn'); return; }
+  const missTxt = miss.length ? ` Көшірмесі жоқ ${miss.length} файл қосылмады.` : '';
+  if (navigator.canShare && navigator.canShare({ files: fs })) {
+    try { await navigator.share({ files: fs, title: `${fs.length} файл` }); say(`${fs.length} файл жіберілді${exif ? ' (файл ретінде — EXIF сақталады)' : ''}.${missTxt}`, miss.length ? 'warn' : 'ok'); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  // бөлісу болмаса - Downloads-қа сақталады (браузер «бірнеше файл жүктеу» рұқсатын сұрауы мүмкін)
+  for (const [b, n] of blobs) { download(b, n); await new Promise(r => setTimeout(r, 250)); }
+  say(`${blobs.length} файл Downloads (Загрузки) папкасына сақталды.${missTxt} Жіберу: Telegram → 📎 → Файл, WhatsApp → 📎 → Документ → Downloads-тан бәрін белгілеңіз` +
+      ` (Файл / Документ ретінде жіберсеңіз EXIF-координат сақталады).`, 'warn');
+}
+$('bPkShare').onclick = () => shareMany(false);
+$('bPkShareX').onclick = () => shareMany(true);
+$('bPkSave').onclick = async () => {
+  const list = pickedList(); let n = 0;
+  for (const it of list) { const b = it.blob || await getFile(it.name); if (b) { download(b, it.name); n++; await new Promise(r => setTimeout(r, 250)); } }
+  say(`${n} файл Downloads (Загрузки) папкасына сақталды.${n < list.length ? ` Көшірмесі жоқ: ${list.length - n}.` : ''}`, n < list.length ? 'warn' : 'ok');
+};
+// Өшіру: тізімнен және қосымшаның жадынан (Downloads / Галерея / компьютер папкасындағы көшірмелер қалады)
+async function removeShots(list) {
+  const gone = new Set(list.map(s => s.name));
+  shots = shots.filter(s => !gone.has(s.name));
+  for (const it of list) { picked.delete(it.name); await delFile(it.name); if (it.raw) await delFile(it.raw); }
+  persistShots(); renderList();
+}
+const removedTxt = n => `${n} файл тізімнен және қосымшадан өшірілді. ${IS_PC ? 'Компьютердегі бастапқы файлдар' : 'Галерея мен Downloads-тағы көшірмелері'} орнында қалды.`;
+// екі рет басу керек (байқаусыз өшірмеу үшін)
+function armDel(btn, label, armedLabel, fn) {
+  let t = 0;
+  btn.onclick = async () => {
+    if (!btn.classList.contains('armed')) { btn.classList.add('armed'); btn.textContent = armedLabel(); t = setTimeout(() => { btn.classList.remove('armed'); btn.textContent = label; }, 4000); return; }
+    clearTimeout(t); btn.classList.remove('armed'); btn.textContent = label; await fn();
+  };
+}
+armDel($('bPkDel'), 'Өшіру', () => `Иә, ${picked.size} файлды өшіру`, async () => {
+  const list = pickedList(); if (!list.length) return;
+  await removeShots(list); say(removedTxt(list.length), 'ok');
+});
+armDel($('vwDel'), 'Өшіру', () => 'Иә, өшіру', async () => {
+  const it = vw.it; if (!it) return;
+  const i = shots.indexOf(it), next = shots[i + 1] || shots[i - 1];
+  await removeShots([it]); say(removedTxt(1), 'ok');
+  if (next && !vw.fromMap) vwShow(next); else closeViewer();
+});
 $('bSP').onclick = () => $('inSP').click();
 $('inSP').onchange = async e => {
   const files = [...e.target.files]; e.target.value = '';
